@@ -6,6 +6,8 @@ devel
 profile.tmp
 
 traffic_light_bag_file/
+data/dbw_test.rosbag.bag
 .idea/
 venv/
 venv-osx/
+training_data/

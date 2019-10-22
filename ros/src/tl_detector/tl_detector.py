@@ -40,6 +40,7 @@ class TLDetector(object):
         self.config = yaml.load(config_string)
 
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
+        self.image_saver_pub = rospy.Publisher('/image_to_save', Image, queue_size=1)
 
         self.bridge = CvBridge()
         self.light_classifier = TLClassifier()
@@ -49,6 +50,8 @@ class TLDetector(object):
         self.last_state = TrafficLight.UNKNOWN
         self.last_wp = -1
         self.state_count = 0
+
+        self.image_save_counter = 0
 
         self.waypoints = None
         self.waypoints_tree = None
@@ -97,6 +100,12 @@ class TLDetector(object):
         else:
             self.upcoming_red_light_pub.publish(Int32(self.last_wp))
         self.state_count += 1
+
+        self.image_save_counter += 1
+        # make sure we save frames only every 5 frames or so
+        if self.image_save_counter == 9:
+            self.image_saver_pub.publish(msg)
+            self.image_save_counter = 0
 
     def get_closest_waypoint(self, x, y):
         """Identifies the closest path waypoint to the given position
