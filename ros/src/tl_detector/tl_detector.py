@@ -102,7 +102,7 @@ class TLDetector(object):
         self.state_count += 1
 
         self.image_save_counter += 1
-        # make sure we save frames only every 5 frames or so
+        # save frames only every 5 frames or so
         if self.image_save_counter == 9:
             self.image_saver_pub.publish(msg)
             self.image_save_counter = 0
