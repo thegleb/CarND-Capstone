@@ -1,0 +1,19 @@
+name: carnd-capstone
+channels:
+    - https://conda.anaconda.org/menpo
+    - conda-forge
+dependencies:
+    - pip
+    - python=2.7
+    - numpy
+    - opencv
+    - matplotlib
+    - jupyter
+    - pillow
+    - scipy
+    - ffmpeg
+    - imageio==2.1.2
+    - pip:
+        - moviepy
+        - tensorflow==1.4
+
