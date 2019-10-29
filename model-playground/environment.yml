@@ -13,7 +13,6 @@ dependencies:
     - scipy
     - ffmpeg
     - imageio==2.1.2
-    - pip:
-        - moviepy
-        - tensorflow==1.4
+    - moviepy
+    - tensorflow==1.4
 
