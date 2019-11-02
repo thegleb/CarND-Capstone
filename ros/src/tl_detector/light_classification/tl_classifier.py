@@ -14,6 +14,7 @@ class TLClassifier(object):
         self.detection_boxes = self.graph.get_tensor_by_name('detection_boxes:0')
         self.detection_scores = self.graph.get_tensor_by_name('detection_scores:0')
         self.detection_classes = self.graph.get_tensor_by_name('detection_classes:0')
+        self.sess = tf.Session(graph=self.graph)
 
     def load_graph(self, graph_file):
         """Loads a frozen inference graph"""
@@ -64,6 +65,8 @@ class TLClassifier(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
+        sess = self.sess
+
         # height, width, shape = image.shape
         # rescale image
         # image = cv2.resize(image, (int(width / 2), int(height / 2)))
@@ -74,43 +77,41 @@ class TLClassifier(object):
 
         # image = preprocess(image)
         image_np = np.expand_dims(np.asarray(image, dtype=np.uint8), 0)
-        with tf.Session(graph=self.graph) as sess:
-            # Actual detection.
-            (boxes, scores, classes) = sess.run(
-                [
-                    self.detection_boxes,
-                    self.detection_scores,
-                    self.detection_classes
-                ],
-                feed_dict={self.image_tensor: image_np}
-            )
+        # Actual detection.
+        (boxes, scores, classes) = sess.run(
+            [
+                self.detection_boxes,
+                self.detection_scores,
+                self.detection_classes
+            ],
+            feed_dict={self.image_tensor: image_np}
+        )
 
-            # Remove unnecessary dimensions
-            boxes = np.squeeze(boxes)
-            scores = np.squeeze(scores)
-            classes = np.squeeze(classes)
+        # Remove unnecessary dimensions
+        boxes = np.squeeze(boxes)
+        scores = np.squeeze(scores)
+        classes = np.squeeze(classes)
 
-            confidence_cutoff = 0.5
-            # Filter boxes with a confidence score less than `confidence_cutoff`
-            boxes, scores, classes = self.filter_boxes(confidence_cutoff, boxes, scores, classes)
-            print(classes)
-            print(scores)
-            # The current box coordinates are normalized to a range between 0 and 1.
-            # This converts the coordinates actual location on the image.
-            # width, height = image.size
-            # adjusted_boxes = self.to_image_coords(boxes, height, width)
-            if len(scores) == 0:
-                return TrafficLight.UNKNOWN
+        confidence_cutoff = 0.5
+        # Filter boxes with a confidence score less than `confidence_cutoff`
+        # boxes, scores, classes = self.filter_boxes(confidence_cutoff, boxes, scores, classes)
+        print(classes)
+        print(scores)
+        # The current box coordinates are normalized to a range between 0 and 1.
+        # This converts the coordinates actual location on the image.
+        # width, height = image.size
+        # adjusted_boxes = self.to_image_coords(boxes, height, width)
+        light_status = TrafficLight.UNKNOWN
+        if len(scores) == 0 or scores[0] < confidence_cutoff:
+            return light_status
 
-            value = scores[0]
-            # likely_color = int(classes[0])
-            likely_color = int(classes[0])
-            print('likely_color [' + str(likely_color) + ']')
-            if likely_color == 1:
-                return TrafficLight.GREEN
-            elif likely_color == 2:
-                return TrafficLight.RED
-            elif likely_color == 3:
-                return TrafficLight.YELLOW
-            else:
-                return TrafficLight.UNKNOWN
+        # likely_color = int(classes[0])
+        likely_color = int(classes[0])
+        print('likely_color [' + str(likely_color) + ']')
+        if likely_color == 1:
+            light_status = TrafficLight.GREEN
+        elif likely_color == 2:
+            light_status = TrafficLight.RED
+        elif likely_color == 3:
+            light_status = TrafficLight.YELLOW
+        return light_status
