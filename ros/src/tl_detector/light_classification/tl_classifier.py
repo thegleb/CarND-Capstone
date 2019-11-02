@@ -64,6 +64,12 @@ class TLClassifier(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
+        # height, width, shape = image.shape
+        # rescale image
+        # image = cv2.resize(image, (int(width / 2), int(height / 2)))
+        # crop image
+        # image = image[int(0.2 * height):int(0.6 * height), int(width * 0.3):int(width * 0.6)]
+        # convert to RGB for detection
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         # image = preprocess(image)
@@ -84,7 +90,7 @@ class TLClassifier(object):
             scores = np.squeeze(scores)
             classes = np.squeeze(classes)
 
-            confidence_cutoff = 0.4
+            confidence_cutoff = 0.5
             # Filter boxes with a confidence score less than `confidence_cutoff`
             boxes, scores, classes = self.filter_boxes(confidence_cutoff, boxes, scores, classes)
             print(classes)

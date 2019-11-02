@@ -28,7 +28,7 @@ class TLDetector(object):
         self.config = yaml.load(config_string)
 
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
-        # self.image_saver_pub = rospy.Publisher('/image_to_save', Image, queue_size=1)
+        self.image_saver_pub = rospy.Publisher('/image_processed', Image, queue_size=1)
 
         self.bridge = CvBridge()
         self.light_classifier = TLClassifier()
@@ -39,7 +39,7 @@ class TLDetector(object):
         self.last_wp = -1
         self.state_count = 0
 
-        self.image_save_counter = 0
+        # self.image_save_counter = 0
 
         self.waypoints = None
         self.waypoints_tree = None
@@ -92,6 +92,7 @@ class TLDetector(object):
             start = time.time()
             light_wp, state = self.process_traffic_lights()
             print('detection took ' + str(time.time() - start))
+            print('detected state ' + str(state))
             # rospy.loginfo("light_wp [%i] state [%i]", light_wp, state)
 
             '''
@@ -144,6 +145,9 @@ class TLDetector(object):
             return False
 
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+
+        print('publishing camera image')
+        self.image_saver_pub.publish(self.camera_image)
 
         return self.light_classifier.get_classification(cv_image)
 
