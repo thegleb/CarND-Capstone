@@ -59,8 +59,10 @@ if __name__ == "__main__":
 
     # Initialize publisher node
     rospy.init_node("camera_info_publisher", anonymous=True)
-    publisher = rospy.Publisher("camera_info", CameraInfo, queue_size=10)
-    rate = rospy.Rate(10)
+    # if we set a queue size of > 1, we will likely process stale images at some point
+    publisher = rospy.Publisher("camera_info", CameraInfo, queue_size=1)
+    # we can't process more than 1 image per second anyway
+    rate = rospy.Rate(1)
 
     # Run publisher
     while not rospy.is_shutdown():
