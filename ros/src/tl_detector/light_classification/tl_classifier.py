@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+import cv2
 
 from styx_msgs.msg import TrafficLight
 
@@ -7,8 +8,8 @@ nn_graph_prefix = './light_classification/'
 
 class TLClassifier(object):
     def __init__(self):
-        # self.graph = self.load_graph(nn_graph_prefix + 'ssd_inception_v2_1000steps/frozen_inference_graph.pb')
         self.graph = self.load_graph(nn_graph_prefix + 'ssd_inception_v2_10000steps/frozen_inference_graph.pb')
+        # self.graph = self.load_graph(nn_graph_prefix + 'fast_rcnn_inception_v2_10000steps/frozen_inference_graph.pb')
         self.image_tensor = self.graph.get_tensor_by_name('image_tensor:0')
         self.detection_boxes = self.graph.get_tensor_by_name('detection_boxes:0')
         self.detection_scores = self.graph.get_tensor_by_name('detection_scores:0')
@@ -63,8 +64,7 @@ class TLClassifier(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        #TODO implement light color prediction
-
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         # image = preprocess(image)
         image_np = np.expand_dims(np.asarray(image, dtype=np.uint8), 0)
@@ -88,6 +88,7 @@ class TLClassifier(object):
             # Filter boxes with a confidence score less than `confidence_cutoff`
             boxes, scores, classes = self.filter_boxes(confidence_cutoff, boxes, scores, classes)
             print(classes)
+            print(scores)
             # The current box coordinates are normalized to a range between 0 and 1.
             # This converts the coordinates actual location on the image.
             # width, height = image.size
@@ -95,14 +96,15 @@ class TLClassifier(object):
             if len(scores) == 0:
                 return TrafficLight.UNKNOWN
 
-            value = max(scores)
-            idx = np.where(scores == value)
-            print('max [' + str(value) + '] for class [' + str(classes[value]) + ']')
-            if int(classes[idx]) == 1:
+            value = scores[0]
+            # likely_color = int(classes[0])
+            likely_color = int(classes[0])
+            print('likely_color [' + str(likely_color) + ']')
+            if likely_color == 1:
                 return TrafficLight.GREEN
-            elif int(classes[idx]) == 2:
+            elif likely_color == 2:
                 return TrafficLight.RED
-            elif int(classes[idx]) == 3:
+            elif likely_color == 3:
                 return TrafficLight.YELLOW
             else:
                 return TrafficLight.UNKNOWN

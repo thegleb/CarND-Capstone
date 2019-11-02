@@ -13,7 +13,7 @@ import cv2
 import yaml
 import time
 
-STATE_COUNT_THRESHOLD = 3
+STATE_COUNT_THRESHOLD = 2
 
 class TLDetector(object):
     def __init__(self):
@@ -43,7 +43,8 @@ class TLDetector(object):
 
         self.waypoints = None
         self.waypoints_tree = None
-        self.is_processing = False
+        self.has_image = False
+        self.last_processed = time.time()
 
         sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
@@ -80,15 +81,17 @@ class TLDetector(object):
             msg (Image): image from car-mounted camera
 
         """
-        if self.is_processing == False:
+        # print(time.time() - self.last_processed)
+        # process camera images every ~2.5 seconds
+        if self.has_image == False or time.time() - self.last_processed > 2.5:
+            self.last_processed = time.time()
+            self.initialized = True
+
             self.has_image = True
             self.camera_image = msg
-            self.is_processing = True
             start = time.time()
             light_wp, state = self.process_traffic_lights()
-            end = time.time()
-            print('detection took ' + str(end - start))
-            self.is_processing = False
+            print('detection took ' + str(time.time() - start))
             # rospy.loginfo("light_wp [%i] state [%i]", light_wp, state)
 
             '''
@@ -108,7 +111,6 @@ class TLDetector(object):
             else:
                 self.upcoming_red_light_pub.publish(Int32(self.last_wp))
             self.state_count += 1
-
         # self.image_save_counter += 1
         # # save frames only every 10 frames or so
         # if self.image_save_counter == 9:
