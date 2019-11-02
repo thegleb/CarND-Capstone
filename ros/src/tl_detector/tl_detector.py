@@ -11,6 +11,7 @@ from scipy.spatial import KDTree
 import tf
 import cv2
 import yaml
+import time
 
 STATE_COUNT_THRESHOLD = 3
 
@@ -42,6 +43,7 @@ class TLDetector(object):
 
         self.waypoints = None
         self.waypoints_tree = None
+        self.is_processing = False
 
         sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
@@ -78,28 +80,34 @@ class TLDetector(object):
             msg (Image): image from car-mounted camera
 
         """
-        self.has_image = True
-        self.camera_image = msg
-        light_wp, state = self.process_traffic_lights()
-        # rospy.loginfo("light_wp [%i] state [%i]", light_wp, state)
+        if self.is_processing == False:
+            self.has_image = True
+            self.camera_image = msg
+            self.is_processing = True
+            start = time.time()
+            light_wp, state = self.process_traffic_lights()
+            end = time.time()
+            print('detection took ' + str(end - start))
+            self.is_processing = False
+            # rospy.loginfo("light_wp [%i] state [%i]", light_wp, state)
 
-        '''
-        Publish upcoming red lights at camera frequency.
-        Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
-        of times till we start using it. Otherwise the previous stable state is
-        used.
-        '''
-        if self.state != state:
-            self.state_count = 0
-            self.state = state
-        elif self.state_count >= STATE_COUNT_THRESHOLD:
-            self.last_state = self.state
-            light_wp = light_wp if state == TrafficLight.RED else -1
-            self.last_wp = light_wp
-            self.upcoming_red_light_pub.publish(Int32(light_wp))
-        else:
-            self.upcoming_red_light_pub.publish(Int32(self.last_wp))
-        self.state_count += 1
+            '''
+            Publish upcoming red lights at camera frequency.
+            Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
+            of times till we start using it. Otherwise the previous stable state is
+            used.
+            '''
+            if self.state != state:
+                self.state_count = 0
+                self.state = state
+            elif self.state_count >= STATE_COUNT_THRESHOLD:
+                self.last_state = self.state
+                light_wp = light_wp if state == TrafficLight.RED else -1
+                self.last_wp = light_wp
+                self.upcoming_red_light_pub.publish(Int32(light_wp))
+            else:
+                self.upcoming_red_light_pub.publish(Int32(self.last_wp))
+            self.state_count += 1
 
         # self.image_save_counter += 1
         # # save frames only every 10 frames or so
