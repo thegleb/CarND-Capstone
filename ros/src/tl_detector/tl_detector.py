@@ -13,7 +13,7 @@ import cv2
 import yaml
 import time
 
-STATE_COUNT_THRESHOLD = 2
+NUM_SEEN_BEFORE_STATE_CHANGE = 2
 
 class TLDetector(object):
     def __init__(self):
@@ -86,14 +86,14 @@ class TLDetector(object):
 
                 '''
                 Publish upcoming red lights at camera frequency.
-                Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
+                Each predicted state has to occur `NUM_SEEN_BEFORE_STATE_CHANGE` number
                 of times till we start using it. Otherwise the previous stable state is
                 used.
                 '''
                 if self.state != state:
-                    self.state_count = 0
+                    self.state_count = 1
                     self.state = state
-                elif self.state_count >= STATE_COUNT_THRESHOLD:
+                elif self.state_count >= NUM_SEEN_BEFORE_STATE_CHANGE:
                     self.last_state = self.state
                     light_wp = light_wp if state == TrafficLight.RED else -1
                     self.last_wp = light_wp
