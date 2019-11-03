@@ -1,15 +1,18 @@
 import numpy as np
 import tensorflow as tf
 import cv2
+from PIL import ImageDraw
+from PIL import Image as PIL_Image
 
 from styx_msgs.msg import TrafficLight
 
-nn_graph_prefix = './light_classification/'
+NN_GRAPH_PREFIX = './light_classification/'
+DEBUG = False
 
 class TLClassifier(object):
     def __init__(self):
-        # self.graph = self.load_graph(nn_graph_prefix + 'ssd_inception_v2_10000steps/frozen_inference_graph.pb')
-        self.graph = self.load_graph(nn_graph_prefix + 'ssd_mobilenet_v1_coco_10000steps/frozen_inference_graph.pb')
+        # self.graph = self.load_graph(NN_GRAPH_PREFIX + 'ssd_inception_v2_10000steps/frozen_inference_graph.pb')
+        self.graph = self.load_graph(NN_GRAPH_PREFIX + 'ssd_mobilenet_v1_coco_10000steps/frozen_inference_graph.pb')
         self.image_tensor = self.graph.get_tensor_by_name('image_tensor:0')
         self.detection_boxes = self.graph.get_tensor_by_name('detection_boxes:0')
         self.detection_scores = self.graph.get_tensor_by_name('detection_scores:0')
@@ -39,6 +42,15 @@ class TLClassifier(object):
         filtered_scores = scores[idxs, ...]
         filtered_classes = classes[idxs, ...]
         return filtered_boxes, filtered_scores, filtered_classes
+
+    def draw_boxes(self, image, boxes, classes, colors, thickness=3):
+        """Draw bounding boxes on the image"""
+        draw = ImageDraw.Draw(image)
+        for i in range(len(boxes)):
+            bot, left, top, right = boxes[i, ...]
+            class_id = int(classes[i])
+            color = colors[class_id - 1]
+            draw.line([(left, top), (left, bot), (right, bot), (right, top), (left, top)], width=thickness, fill=color)
 
     def to_image_coords(self, boxes, height, width):
         """
@@ -94,24 +106,34 @@ class TLClassifier(object):
 
         confidence_cutoff = 0.5
         # Filter boxes with a confidence score less than `confidence_cutoff`
-        # boxes, scores, classes = self.filter_boxes(confidence_cutoff, boxes, scores, classes)
-        # print(classes)
-        # print(scores)
         # The current box coordinates are normalized to a range between 0 and 1.
         # This converts the coordinates actual location on the image.
-        # width, height = image.size
-        # adjusted_boxes = self.to_image_coords(boxes, height, width)
+        if DEBUG is False:
+            annotated_image = image
+        else:
+            height, width, channels = image.shape
+            boxes, scores, classes = self.filter_boxes(confidence_cutoff, boxes, scores, classes)
+            adjusted_boxes = self.to_image_coords(boxes, height, width)
+            print(classes)
+            print(scores)
+
+            pil_image = PIL_Image.fromarray(image)
+            self.draw_boxes(pil_image, adjusted_boxes, classes, ['green', 'red', 'yellow', 'gray'])
+            annotated_image = np.asarray(pil_image)
+
         light_status = TrafficLight.UNKNOWN
         if len(scores) == 0 or scores[0] < confidence_cutoff:
-            return light_status
+            return light_status, annotated_image
 
-        # likely_color = int(classes[0])
         likely_color = int(classes[0])
-        print('likely_color [' + str(likely_color) + ']')
+
+        if DEBUG is True:
+            print('likely_color [' + str(likely_color) + ']')
+
         if likely_color == 1:
             light_status = TrafficLight.GREEN
         elif likely_color == 2:
             light_status = TrafficLight.RED
         elif likely_color == 3:
             light_status = TrafficLight.YELLOW
-        return light_status
+        return light_status, annotated_image

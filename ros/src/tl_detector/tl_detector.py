@@ -9,7 +9,6 @@ from cv_bridge import CvBridge
 from light_classification.tl_classifier import TLClassifier
 from scipy.spatial import KDTree
 import tf
-import cv2
 import math
 import yaml
 import time
@@ -17,6 +16,7 @@ import time
 NUM_SEEN_BEFORE_STATE_CHANGE = 2
 # anything closer than this and we risk running a red light or stopping too quickly
 MIN_STOPPING_DISTANCE = 50
+DEBUG = False
 
 class TLDetector(object):
     def __init__(self):
@@ -31,7 +31,7 @@ class TLDetector(object):
         self.config = yaml.load(config_string)
 
         self.upcoming_stop_line_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
-        self.image_saver_pub = rospy.Publisher('/image_processed', Image, queue_size=1)
+        self.image_saver_pub = rospy.Publisher('/image_annotated', Image, queue_size=1)
 
         self.bridge = CvBridge()
         self.light_classifier = TLClassifier()
@@ -71,7 +71,7 @@ class TLDetector(object):
         self.loop()
 
     def loop(self):
-        rate = rospy.Rate(10)
+        rate = rospy.Rate(1)
         while not rospy.is_shutdown():
             self.upcoming_stop_line_pub.publish(self.upcoming_stop_line)
             # print(time.time() - self.last_processed)
@@ -86,8 +86,9 @@ class TLDetector(object):
                 self.has_image = True
                 start = time.time()
                 light_wp, state = self.process_traffic_lights()
-                print('detection took ' + str(time.time() - start))
-                print('detected state ' + str(state))
+                if DEBUG is True:
+                    print('detection took ' + str(time.time() - start))
+                    print('detected state ' + str(state))
                 # rospy.loginfo("light_wp [%i] state [%i]", light_wp, state)
 
                 '''
@@ -102,9 +103,11 @@ class TLDetector(object):
                 line_y = self.waypoints.waypoints[light_wp].pose.pose.position.y
                 car_x = self.pose.pose.position.x
                 car_y = self.pose.pose.position.y
-                dist = math.sqrt(pow(line_x - car_x, 2) + pow(line_y - car_y, 2))
-                # print('distance from the next light ' + str(dist))
-                print('velocity ' + str(self.curr_vel))
+                dist_to_stopline = math.sqrt(pow(line_x - car_x, 2) + pow(line_y - car_y, 2))
+
+                if DEBUG is True:
+                    print('distance from the next light ' + str(dist_to_stopline))
+
                 if self.state != state:
                     self.state_count = 1
                     self.state = state
@@ -115,7 +118,7 @@ class TLDetector(object):
                     elif state == TrafficLight.YELLOW:
                         # if we are close to the light and it's yellow, then keep going; else stop
                         # based on guesstimate of 25 meters at top sim velocity (23 mph = ~10 m/sec)
-                        light_wp = -1 if dist < self.curr_vel * 2.5 else light_wp
+                        light_wp = -1 if dist_to_stopline < self.curr_vel * 2.5 else light_wp
                     self.last_wp = light_wp
                     self.upcoming_stop_line = Int32(light_wp)
                 else:
@@ -123,11 +126,7 @@ class TLDetector(object):
                 self.state_count += 1
 
                 self.is_processing = False
-            # self.image_save_counter += 1
-            # # save frames only every 10 frames or so
-            # if self.image_save_counter == 9:
-            #     self.image_saver_pub.publish(msg)
-            #     self.image_save_counter = 0
+
             rate.sleep()
 
     def pose_cb(self, msg):
@@ -183,10 +182,13 @@ class TLDetector(object):
 
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
 
-        print('publishing camera image')
-        self.image_saver_pub.publish(self.camera_image)
+        light_state, annotated_image = self.light_classifier.get_classification(cv_image)
 
-        return self.light_classifier.get_classification(cv_image)
+        if DEBUG is True:
+            print('publishing camera image')
+            self.image_saver_pub.publish(self.bridge.cv2_to_imgmsg(annotated_image, "rgb8"))
+
+        return light_state
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
