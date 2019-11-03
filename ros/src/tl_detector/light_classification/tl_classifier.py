@@ -8,8 +8,8 @@ nn_graph_prefix = './light_classification/'
 
 class TLClassifier(object):
     def __init__(self):
-        self.graph = self.load_graph(nn_graph_prefix + 'ssd_inception_v2_10000steps/frozen_inference_graph.pb')
-        # self.graph = self.load_graph(nn_graph_prefix + 'fast_rcnn_inception_v2_10000steps/frozen_inference_graph.pb')
+        # self.graph = self.load_graph(nn_graph_prefix + 'ssd_inception_v2_10000steps/frozen_inference_graph.pb')
+        self.graph = self.load_graph(nn_graph_prefix + 'ssd_mobilenet_v1_coco_10000steps/frozen_inference_graph.pb')
         self.image_tensor = self.graph.get_tensor_by_name('image_tensor:0')
         self.detection_boxes = self.graph.get_tensor_by_name('detection_boxes:0')
         self.detection_scores = self.graph.get_tensor_by_name('detection_scores:0')
@@ -95,8 +95,8 @@ class TLClassifier(object):
         confidence_cutoff = 0.5
         # Filter boxes with a confidence score less than `confidence_cutoff`
         # boxes, scores, classes = self.filter_boxes(confidence_cutoff, boxes, scores, classes)
-        print(classes)
-        print(scores)
+        # print(classes)
+        # print(scores)
         # The current box coordinates are normalized to a range between 0 and 1.
         # This converts the coordinates actual location on the image.
         # width, height = image.size
