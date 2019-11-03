@@ -117,8 +117,11 @@ class TLDetector(object):
                         light_wp = -1
                     elif state == TrafficLight.YELLOW:
                         # if we are close to the light and it's yellow, then keep going; else stop
-                        # based on guesstimate of 25 meters at top sim velocity (23 mph = ~10 m/sec)
-                        light_wp = -1 if dist_to_stopline < self.curr_vel * 2.5 else light_wp
+                        # based on guesstimate of 10 meters at top sim velocity (23 mph = ~10 m/sec)
+                        # if (as of time of writing) it takes worst case 2 seconds to notice the light switch
+                        # from green to yellow, it is likely to change in about ~1 more second
+                        # so at current velocity we expect to cross the line before the light turns red
+                        light_wp = -1 if dist_to_stopline < self.curr_vel * 0.8 else light_wp
                     self.last_wp = light_wp
                     self.upcoming_stop_line = Int32(light_wp)
                 else:
