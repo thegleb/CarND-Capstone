@@ -71,7 +71,7 @@ class TLDetector(object):
         self.loop()
 
     def loop(self):
-        rate = rospy.Rate(1)
+        rate = rospy.Rate(10)
         while not rospy.is_shutdown():
             self.upcoming_stop_line_pub.publish(self.upcoming_stop_line)
             # print(time.time() - self.last_processed)
