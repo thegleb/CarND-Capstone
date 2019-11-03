@@ -29,12 +29,12 @@ class TLDetector(object):
 
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string)
-
+        self.is_site = self.config['is_site']
         self.upcoming_stop_line_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
         self.image_saver_pub = rospy.Publisher('/image_annotated', Image, queue_size=1)
 
         self.bridge = CvBridge()
-        self.light_classifier = TLClassifier()
+        self.light_classifier = TLClassifier(self.is_site)
         self.listener = tf.TransformListener()
 
         self.state = TrafficLight.UNKNOWN
@@ -86,7 +86,7 @@ class TLDetector(object):
                 self.has_image = True
                 start = time.time()
                 light_wp, state = self.process_traffic_lights()
-                if DEBUG is True:
+                if DEBUG:
                     print('detection took ' + str(time.time() - start))
                     print('detected state ' + str(state))
                 # rospy.loginfo("light_wp [%i] state [%i]", light_wp, state)
@@ -105,7 +105,7 @@ class TLDetector(object):
                 car_y = self.pose.pose.position.y
                 dist_to_stopline = math.sqrt(pow(line_x - car_x, 2) + pow(line_y - car_y, 2))
 
-                if DEBUG is True:
+                if DEBUG:
                     print('distance from the next light ' + str(dist_to_stopline))
 
                 if self.state != state:
@@ -116,7 +116,7 @@ class TLDetector(object):
                     if state == TrafficLight.GREEN:
                         light_wp = -1
                     elif state == TrafficLight.YELLOW:
-                        # if we are close to the light and it’s yellow, then keep going; else stop.
+                        # if we are close to the light and it's yellow, then keep going; else stop.
                         # if it takes worst case 2 seconds to notice the light change from green to yellow,
                         # it is likely to turn red in about ~1 more second.
                         # at current velocity we expect to cross the line in 0.8 seconds before it turns red.
@@ -186,7 +186,7 @@ class TLDetector(object):
 
         light_state, annotated_image = self.light_classifier.get_classification(cv_image)
 
-        if DEBUG is True:
+        if DEBUG:
             print('publishing camera image')
             self.image_saver_pub.publish(self.bridge.cv2_to_imgmsg(annotated_image, "rgb8"))
 

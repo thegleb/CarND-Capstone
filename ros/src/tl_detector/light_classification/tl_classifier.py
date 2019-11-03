@@ -8,11 +8,27 @@ from styx_msgs.msg import TrafficLight
 
 NN_GRAPH_PREFIX = './light_classification/'
 DEBUG = False
+MODEL_TO_SIM = {
+    '1': TrafficLight.GREEN,
+    '2': TrafficLight.RED,
+    '3': TrafficLight.YELLOW,
+}
+
+MODEL_TO_SITE = {
+    '0': TrafficLight.GREEN,
+    '2': TrafficLight.RED,
+    '1': TrafficLight.YELLOW,
+}
 
 class TLClassifier(object):
-    def __init__(self):
+    def __init__(self, is_site):
+        self.is_site = is_site
         # self.graph = self.load_graph(NN_GRAPH_PREFIX + 'ssd_inception_v2_10000steps/frozen_inference_graph.pb')
-        self.graph = self.load_graph(NN_GRAPH_PREFIX + 'ssd_mobilenet_v1_coco_10000steps/frozen_inference_graph.pb')
+        if is_site:
+            graph_path = 'site/ssd_mobilenet_v1_coco_20000steps/frozen_inference_graph.pb'
+        else:
+            graph_path =  'sim/ssd_mobilenet_v1_coco_20000steps/frozen_inference_graph.pb'
+        self.graph = self.load_graph(NN_GRAPH_PREFIX + graph_path)
         self.image_tensor = self.graph.get_tensor_by_name('image_tensor:0')
         self.detection_boxes = self.graph.get_tensor_by_name('detection_boxes:0')
         self.detection_scores = self.graph.get_tensor_by_name('detection_scores:0')
@@ -127,13 +143,11 @@ class TLClassifier(object):
 
         likely_color = int(classes[0])
 
-        if DEBUG is True:
-            print('likely_color [' + str(likely_color) + ']')
+        lookup_dict = MODEL_TO_SITE if self.is_site else MODEL_TO_SIM
+        if str(likely_color) in lookup_dict:
+            light_status = lookup_dict[str(likely_color)]
 
-        if likely_color == 1:
-            light_status = TrafficLight.GREEN
-        elif likely_color == 2:
-            light_status = TrafficLight.RED
-        elif likely_color == 3:
-            light_status = TrafficLight.YELLOW
+        if DEBUG:
+            print('likely_color [' + str(likely_color) + ']')
+            print('light status is ' + str(light_status))
         return light_status, annotated_image
