@@ -13,7 +13,7 @@ import cv2
 import yaml
 import time
 
-STATE_COUNT_THRESHOLD = 2
+NUM_SEEN_BEFORE_STATE_CHANGE = 2
 
 class TLDetector(object):
     def __init__(self):
@@ -45,6 +45,8 @@ class TLDetector(object):
         self.waypoints_tree = None
         self.has_image = False
         self.last_processed = time.time()
+        self.is_processing = False
+        self.upcoming_red_light = None
 
         sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
@@ -59,7 +61,54 @@ class TLDetector(object):
         sub3 = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb)
         sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
 
-        rospy.spin()
+        # rospy.spin()
+        self.loop()
+
+    def loop(self):
+        rate = rospy.Rate(10)
+        while not rospy.is_shutdown():
+            self.upcoming_red_light_pub.publish(self.upcoming_red_light)
+            # print(time.time() - self.last_processed)
+            # process the first image and then every ~2 seconds
+            # if self.has_image == False or time.time() - self.last_processed > 2.0:
+            if self.camera_image and (self.has_image == False or self.is_processing == False):
+                self.is_processing = True
+
+                self.last_processed = time.time()
+                self.initialized = True
+
+                self.has_image = True
+                start = time.time()
+                light_wp, state = self.process_traffic_lights()
+                print('detection took ' + str(time.time() - start))
+                print('detected state ' + str(state))
+                # rospy.loginfo("light_wp [%i] state [%i]", light_wp, state)
+
+                '''
+                Publish upcoming red lights at camera frequency.
+                Each predicted state has to occur `NUM_SEEN_BEFORE_STATE_CHANGE` number
+                of times till we start using it. Otherwise the previous stable state is
+                used.
+                '''
+                if self.state != state:
+                    self.state_count = 1
+                    self.state = state
+                elif self.state_count >= NUM_SEEN_BEFORE_STATE_CHANGE:
+                    self.last_state = self.state
+                    light_wp = light_wp if state == TrafficLight.RED else -1
+                    self.last_wp = light_wp
+                    self.upcoming_red_light = Int32(light_wp)
+                else:
+                    self.upcoming_red_light = Int32(self.last_wp)
+                self.state_count += 1
+
+                self.is_processing = False
+            # self.image_save_counter += 1
+            # # save frames only every 10 frames or so
+            # if self.image_save_counter == 9:
+            #     self.image_saver_pub.publish(msg)
+            #     self.image_save_counter = 0
+            rate.sleep()
 
     def pose_cb(self, msg):
         self.pose = msg
@@ -81,42 +130,7 @@ class TLDetector(object):
             msg (Image): image from car-mounted camera
 
         """
-        # print(time.time() - self.last_processed)
-        # process camera images every ~2.5 seconds
-        if self.has_image == False or time.time() - self.last_processed > 2.5:
-            self.last_processed = time.time()
-            self.initialized = True
-
-            self.has_image = True
-            self.camera_image = msg
-            start = time.time()
-            light_wp, state = self.process_traffic_lights()
-            print('detection took ' + str(time.time() - start))
-            print('detected state ' + str(state))
-            # rospy.loginfo("light_wp [%i] state [%i]", light_wp, state)
-
-            '''
-            Publish upcoming red lights at camera frequency.
-            Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
-            of times till we start using it. Otherwise the previous stable state is
-            used.
-            '''
-            if self.state != state:
-                self.state_count = 0
-                self.state = state
-            elif self.state_count >= STATE_COUNT_THRESHOLD:
-                self.last_state = self.state
-                light_wp = light_wp if state == TrafficLight.RED else -1
-                self.last_wp = light_wp
-                self.upcoming_red_light_pub.publish(Int32(light_wp))
-            else:
-                self.upcoming_red_light_pub.publish(Int32(self.last_wp))
-            self.state_count += 1
-        # self.image_save_counter += 1
-        # # save frames only every 10 frames or so
-        # if self.image_save_counter == 9:
-        #     self.image_saver_pub.publish(msg)
-        #     self.image_save_counter = 0
+        self.camera_image = msg
 
     def get_closest_waypoint(self, x, y):
         """Identifies the closest path waypoint to the given position
@@ -130,7 +144,7 @@ class TLDetector(object):
         """
         return self.waypoints_tree.query([x, y], 1)[1]
 
-    def get_light_state(self, light):
+    def get_light_state(self):
         """Determines the current color of the traffic light
 
         Args:
@@ -178,7 +192,7 @@ class TLDetector(object):
                     line_wp_idx = temp_wp_idx
 
         if closest_light:
-            state = self.get_light_state(closest_light)
+            state = self.get_light_state()
             return line_wp_idx, state
 
         return -1, TrafficLight.UNKNOWN
