@@ -4,39 +4,59 @@
 
 #### Team members
 - Gleb Podkolzin (lead)
-- Ajith Rai
+- Ajith Raj
 - Allen Hsu
 - David Altimira
 - Ming Wong
 
 # General approach
 
-We started by implementing a waypoint updater based on walkthrough lectures. The waypoint updater publishes at a frequency of 50hz. At every cycle, we send a maximum set of waypoints ahead of the car to the `final_waypoints` publisher.
-
-Each waypoint includes a target velocity value. When there is no stopline nearby, we simply publish these waypoints as given. However, if there is a stopline the car must obey, what happens is we gradually bring the target velocity of the car down to 0 to make sure the car stops before the stopline waypoint.
-
-A `camera_info` publisher publishes the current camera image to the `/image_color` topic at 10hz. We subscribe to `/image_color` inside the `tl_detector` node and cache the current image received. The goal of `tl_detector` is to perform the necessary image processing and publish the next stopline. We do this at a frequency of 10hz as well. Additionally, we run the most recent available camera image through a neural network (described below) to detect any traffic lights with their status.
-
-Since the neural network takes longer than 100msec (speed needed to maintain a constant 10hz) to return results, at every cycle we set a boolean to keep track of when we are currently processing an image. As a result, each detection cycle uses the latest image and there is less chance of lag due to triggering a new cycle of traffic light detection before the previous one completes, causing stale results - one of the problems we ran into initially.
-
+We started by implementing a waypoint updater based on walkthrough lectures. The waypoint updater publishes at a
+ frequency of 50hz. At every cycle, we send some maximum number of waypoints ahead of the car to the `final_waypoints
+ ` publisher.
+ 
+Each waypoint includes a target velocity value. When there is no stopline nearby, we simply publish these waypoints
+ as given. However, if there is a stopline the car must obey, we gradually bring the target velocity of the car down
+  to `0` to make sure the car stops before the stopline waypoint.
+  
+A `camera_info` publisher publishes the current camera image to the `/image_color` topic at 10hz. We subscribe to
+ `/image_color` inside the `tl_detector` node and cache the current image received. The goal of `tl_detector` is to
+  perform the necessary image processing and publish the next stopline. We do this at a frequency of 10hz as well.
+  Additionally, we run the most recent available camera image through a neural network (described below) to detect
+   any traffic lights with their status.
+   
+Since the neural network takes longer than 100msec (processing speed needed to maintain a constant 10hz) to return
+ results, at every cycle we set a boolean to keep track of when we are currently processing an image. As a result
+ , each detection cycle uses the latest image and there is less chance of lag due to triggering a new cycle of traffic light
+   detection before the previous one completes, causing a series of stale results messing up the car behavior.
+   
 For each detected traffic light state, we use a couple techniques to filter out possible noise:
 
-- Using detections with a confidence level higher than `0.5`
-- Waiting until we identify the same state at least 2 times before updating the prediction.
-
-Both of these techniques guard against unpredictable behavior due to errors in detection. For the second method, 2 was a number chosen to balance confidence in the prediction with reacting quickly enough to changing conditions.
-
-Another byproduct of slow detection speeds is the possibility of the car seeing a yellow light and interpreting it too slowly, allowing the light to turn red and causing the car to run the red light. With 2 cycles to update predictions, the worst case is ~3 detections, because the light can change in the next frame after the previous cycle of detection kicked off.
-
+- Only using detections with a confidence level higher than `0.5`
+- Waiting until we identify the same state at least 2 times before updating the prediction
+ 
+ Both of these techniques guard against unpredictable behavior due to errors in detection. For the second method, 2
+ was a number chosen to balance confidence in the prediction with reacting quickly enough to changing conditions.
+   
+Another byproduct of slow detection speeds is the possibility of the car seeing a yellow light and
+ interpreting it too slowly, allowing the light to turn red and causing the car to run the red light. With 2 cycles to
+ update predictions, the worst case is ~3 detections, because the light can change in the next frame after the
+ previous cycle of detection kicked off.
+   
 To solve this, we assume the next stopline applies unless either:
 - we see a `green` light or
-- we identify a `yellow` light and we are close enough to it to exclude the possibility of the light turning red before we cross the line.
+- we identify a `yellow` light and we are close enough to it to exclude the possibility of the light turning red
+ before we cross the line.
 
-This ensures that in the worst case scenario, the car will always stop at the next stopline (assuming it is not mis -detecting red lights as green).
+This ensures that in the worst case scenario, the car will always stop at the next stopline (assuming it is not mis
+-detecting red lights as green).
+
+### Future work
 
 # Traffic light detection
 
-For an autonomous car it is important to detect the traffic lights so that the car can adjust its speed based on the light's state: red, green or yellow. For example, when the car navigates across different waypoints, the car might want to travel at its maximum speed. However, as soon as it detects a red light, it should reduce the speed (and stop). This is done by adjusting the waypoints' speed.
+For an autonomous car it is important to detect the traffic lights so that the car can adjust its speed based on the
+ light's state: red, green or yellow. For example, when the car navigates across different waypoints, the car might want to travel at its maximum speed. However, as soon as it detects a red light, it should reduce the speed (and stop). This is done by adjusting the waypoints' speed.
 
 To detect the traffic lights,  the system (and in particular the Perception module) should have a model that can detects correctly traffic lights and its state (red, yellow or green). Furthermore, apart from a high degree accuracy (as a detection error could cause a car accident), the traffic light classifier might need to run fast, i.e. be efficient.
 
@@ -49,13 +69,13 @@ There are different models and architectures we considered for the traffic light
 
 Also, there are implementation of neural networks that are optimized to run efficiently. These are named MobileNets, which are are neural networks that can run efficiently and can therefore meet the efficiency requirement.
 
-Our approach was to reuse existing models from the TensorFlow detection model zoo [2]: collection of detection models pre-trained on different datasets on the task of object detection. These pre-trained models would be our starting point and we will re-train these models with our dataset generated for our training.
+Our approach was to reuse existing models from the TensorFlow detection model zoo <sup>[2]</sup>: collection of detection models pre-trained on different datasets on the task of object detection. These pre-trained models would be our starting point and we will re-train these models with our dataset generated for our training.
 
 The different models we aimed to re-train and evaluate their accuracy and performance were:
 
-- ssd_inception_v2_coco.
-- ssd_mobilenet_v2_coco.
-- faster_rcnn_inception_v2_coco
+- ssd inception v2 coco.
+- ssd mobilenet v2 coco.
+- faster rcnn inception v2 coco
 
 ### Methodology approach taken
 
@@ -84,11 +104,21 @@ Each model has a particular settings (.config file) that we needed to tune. The 
 
 ## Datasets
 
-The dataset to be used is important in order to get a good model [1]. Different characteristics that we might need to take into account in order to get the more general model as possible: (1) data should be balanced (similar amount of samples for the different classes to classify (red, green and yellow traffic light images), and (2) it might not be necessary to obtain real world images, but good quality synthetic images can achieve a high degree of generalization [1].
+The collection of datasets was one of the most fundamental tasks. A dataset which contains the necessary features along with different augmentations helps the model 
+to increase the model accuracy. Some characteristics of good dataset are listed below:
+
+1. Data should be well balanced ie., similar amount of sample data should be available for different classes to
+ classify (red, green and yellow traffic light images)
+2. Dataset should contain same data from different parameter combinations. (Traffic light images should be taken from all distances ie., too close to far away distances)
+3. Data should be augmented using different techniques like Horizontal/Vertical Orientation, Rotation, Brightness, Zoom etc. 
+4. Additional augmentation techniques includes adding good quality synthetic images which can help the model achieve a higher degree of generalization<sup>[2]</sup>. 
 
 ### Simulation data
 
-We used two different datasets. For training the models we used an external one [3]. For evaluating the model, we created another dataset that was generated with a script. This script consisted in taking random background images, and placing random number of traffic lights (red, green or yellow) at random positions and with some transformations such as rotation or scaling.
+We used two different datasets. For training the models we used an external one [3]. For evaluating the model, we
+ created another dataset that was generated with a script. This script consisted in taking random background images, 
+ and placing random number of traffic lights (red, green or yellow) at random positions and with some transformations
+ such as rotation or scaling.
 
 ### Site data
 
@@ -115,7 +145,7 @@ The above figure we can see that the fast_rcnn_inception_v2 is quite slow and th
 
 To further analyse the selected model, we also decided to evaluate its performance for different traffic light sizes. This could indicate if there are some traffic sizes that the model performed better than others and whether we need to feed more data (and which traffic light sizes would be better the new data to have).
 
-We decided to have 10 categories of bounding boxes sizes. To obtain the range of traffic light sizes for each category, we calculated the maximum size and the minimum size of the traffic lights. Then, the size was obtained by $step=\frac{(max_size-min_size)}{10}$. So the first category in the graph (category 0) had the following range of traffic light size: [min_size, min_size+step]. The last category had [max_size-step, max_size].
+We decided to have 10 categories of bounding boxes sizes. To obtain the range of traffic light sizes for each category, we calculated the maximum size and the minimum size of the traffic lights. Then, the size was obtained by `$step=\frac{(max_size-min_size)}{10}$`. So the first category in the graph (category 0) had the following range of traffic light size: `[min_size, min_size+step]`. The last category had `[max_size-step, max_size]`.
 
  ![](./img/simulator_ssd_mobilenet_bbox_performance.png "Traffic light sizes analsysi for the ssd mobilened model")
 
@@ -127,6 +157,10 @@ We decided to have 10 categories of bounding boxes sizes. To obtain the range of
 
 ### Methodology to generate datasets
 
+The Simulator images were collected by directly running the vehicle in the Simulator environment. The images collected were then labeled using the open source tool labellmg.<sup>[4]</sup>
+The XML labels were then used to create a csv file containing all the input image and their respective label details.<sup>[6]</sup> Once the csv file was generated, it was converted into TFRecord format, as that is the label input for the model training. <sup>[5]</sup>
+
+
 ####  Data augmentation
 
 # Future work
@@ -134,6 +168,9 @@ We decided to have 10 categories of bounding boxes sizes. To obtain the range of
 
 # References
 
-[1] https://anyverse.ai/2019/06/19/synthetic-vs-real-world-data-for-traffic-light-classification/
-[2] https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md
-[3] https://github.com/alex-lechner/Traffic-Light-Classification#linux
+<sup>[1]</sup> [https://anyverse.ai/2019/06/19/synthetic-vs-real-world-data-for-traffic-light-classification](https://anyverse.ai/2019/06/19/synthetic-vs-real-world-data-for-traffic-light-classification)        
+<sup>[2]</sup> [https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md  ](https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md  )  
+<sup>[3]</sup> [https://github.com/alex-lechner/Traffic-Light-Classification#linux](https://github.com/alex-lechner/Traffic-Light-Classification#linux)
+<sup>[4]</sup> [https://github.com/tzutalin/labelImg](https://github.com/tzutalin/labelImg)    
+<sup>[5]</sup> [https://github.com/datitran/raccoon_dataset](https://github.com/datitran/raccoon_dataset)    
+<sup>[6]</sup> [https://pythonprogramming.net/creating-tfrecord-files-tensorflow-object-detection-api-tutorial  ](https://pythonprogramming.net/creating-tfrecord-files-tensorflow-object-detection-api-tutorial  )   
