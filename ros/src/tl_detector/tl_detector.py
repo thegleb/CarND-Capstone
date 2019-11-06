@@ -13,10 +13,10 @@ import math
 import yaml
 import time
 
-NUM_SEEN_BEFORE_STATE_CHANGE = 2
-# anything closer than this and we risk running a red light or stopping too quickly
-MIN_STOPPING_DISTANCE = 50
-DEBUG = False
+DEBUG = True
+
+LARGE_NUMBER = 100000
+NUM_CONFIRMATIONS = 2
 
 class TLDetector(object):
     def __init__(self):
@@ -30,6 +30,8 @@ class TLDetector(object):
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string)
         self.is_site = self.config['is_site']
+        if DEBUG:
+            print('is_site [' + str(self.is_site) + ']')
         self.upcoming_stop_line_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
         self.image_saver_pub = rospy.Publisher('/image_annotated', Image, queue_size=1)
 
@@ -53,8 +55,8 @@ class TLDetector(object):
         self.is_processing = False
         self.upcoming_stop_line = None
 
-        sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
-        sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
+        rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
+        rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         '''
         /vehicle/traffic_lights provides you with the location of the traffic light in 3D map space and
@@ -63,8 +65,8 @@ class TLDetector(object):
         simulator. When testing on the vehicle, the color state will not be available. You'll need to
         rely on the position of the light and the camera image to predict it.
         '''
-        sub3 = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb)
-        sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
+        rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb)
+        rospy.Subscriber('/image_color', Image, self.image_cb)
         rospy.Subscriber('/current_velocity', TwistStamped, self.velocity_cb)
 
         # rospy.spin()
@@ -77,7 +79,7 @@ class TLDetector(object):
             # print(time.time() - self.last_processed)
             # process the first image and then every ~2 seconds
             # if self.has_image == False or time.time() - self.last_processed > 2.0:
-            if self.camera_image and (self.has_image == False or self.is_processing == False):
+            if self.pose and self.camera_image and (self.has_image == False or self.is_processing == False):
                 self.is_processing = True
 
                 self.last_processed = time.time()
@@ -93,17 +95,20 @@ class TLDetector(object):
 
                 '''
                 Publish upcoming red lights at detection frequency.
-                Each predicted state has to occur `NUM_SEEN_BEFORE_STATE_CHANGE` number
+                Each predicted state has to occur `NUM_CONFIRMATIONS` number
                 of times till we start using it. Otherwise the previous stable state is
                 used.
                 '''
 
                 # check distance from light
-                line_x = self.waypoints.waypoints[light_wp].pose.pose.position.x
-                line_y = self.waypoints.waypoints[light_wp].pose.pose.position.y
-                car_x = self.pose.pose.position.x
-                car_y = self.pose.pose.position.y
-                dist_to_stopline = math.sqrt(pow(line_x - car_x, 2) + pow(line_y - car_y, 2))
+                if light_wp > -1:
+                    line_x = self.waypoints.waypoints[light_wp].pose.pose.position.x
+                    line_y = self.waypoints.waypoints[light_wp].pose.pose.position.y
+                    car_x = self.pose.pose.position.x
+                    car_y = self.pose.pose.position.y
+                    dist_to_stopline = math.sqrt(pow(line_x - car_x, 2) + pow(line_y - car_y, 2))
+                else:
+                    dist_to_stopline = LARGE_NUMBER
 
                 if DEBUG:
                     print('distance from the next light ' + str(dist_to_stopline))
@@ -111,7 +116,7 @@ class TLDetector(object):
                 if self.state != state:
                     self.state_count = 1
                     self.state = state
-                elif self.state_count >= NUM_SEEN_BEFORE_STATE_CHANGE:
+                elif self.state_count >= NUM_CONFIRMATIONS:
                     self.last_state = self.state
                     if state == TrafficLight.GREEN:
                         light_wp = -1
@@ -206,6 +211,7 @@ class TLDetector(object):
 
         # List of positions that correspond to the line to stop in front of for a given intersection
         stop_line_positions = self.config['stop_line_positions']
+        diff = LARGE_NUMBER
         if self.pose:
             car_wp_idx = self.get_closest_waypoint(self.pose.pose.position.x, self.pose.pose.position.y)
             diff = len(self.waypoints.waypoints)
@@ -218,7 +224,10 @@ class TLDetector(object):
                     closest_light = light
                     line_wp_idx = temp_wp_idx
 
-        if closest_light:
+        # ~220 waypoints is around 110 meters. At a velocity of 40 km/hr this offers us ~10 seconds to react.
+        # Detection around 0.5-0.6sec/iteration and 2 iterations to confirm detection means we
+        # have around ~9 seconds / ~100 meters to stop.
+        if closest_light and diff < 220:
             state = self.get_light_state()
             return line_wp_idx, state
 
