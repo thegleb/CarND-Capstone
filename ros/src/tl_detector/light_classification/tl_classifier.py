@@ -6,8 +6,10 @@ from PIL import Image as PIL_Image
 
 from styx_msgs.msg import TrafficLight
 
+DEBUG = True
+
 NN_GRAPH_PREFIX = './light_classification/'
-DEBUG = False
+
 MODEL_TO_SIM = {
     '1': TrafficLight.GREEN,
     '2': TrafficLight.RED,

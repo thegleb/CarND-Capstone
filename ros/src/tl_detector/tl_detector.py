@@ -79,7 +79,10 @@ class TLDetector(object):
             # print(time.time() - self.last_processed)
             # process the first image and then every ~2 seconds
             # if self.has_image == False or time.time() - self.last_processed > 2.0:
-            if self.pose and self.camera_image and (self.has_image == False or self.is_processing == False):
+            if self.pose and \
+                    self.camera_image and \
+                    (self.has_image == False or self.is_processing == False) and \
+                    self.waypoints_tree:
                 self.is_processing = True
 
                 self.last_processed = time.time()
