@@ -117,6 +117,8 @@ We used two different datasets. For training the models we used an external one 
  and placing random number of traffic lights (red, green or yellow) at random positions and with some transformations
  such as rotation or scaling.
 
+ The external dataset [3] used for training the simulator model was composed by 888 green lights, 1430 red lights and 254 yellow lights.
+
 ### Site data
 
 
@@ -131,6 +133,8 @@ We used different models with different steps, and we evaluated the performance 
 - Background: If we detect a traffic light on a background.
 
 As we can see in the below picture, the fast_rcnn_inception_v2 with 10000 steps performed better than the other models. The rest of the models performed similarly. We can also observer that there were just few traffic lights that were detected incorrectly but there were quite a few traffic lights not detected.
+
+Another observation is that the models detected detected better red lights than the other lights. This probably is owing to the fact that the trained dataset used had more red lights. Although unbalanced dataset is undesirable, we thought that for our purposes this dataset was enough useful to train the model as the red light is the one that changes the behaviour of the car by making it to stop.
 
 ![](./img/simulator_model_performance.png "Model performance using simulator data")
 
