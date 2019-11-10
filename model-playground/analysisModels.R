@@ -80,5 +80,8 @@ ggplot(dataModelBBox_Process.reshape, aes(x=BBoxSizeLevel, y=Count, group=Measur
   geom_line(aes(color=Measurement))+
   geom_point(aes(color=Measurement))
 
+# Analysis of the existing database
+
+dataDB <- read.csv(file="evaluation_simulator_training_datasetx.csv", header=FALSE, sep=",")
 
 
