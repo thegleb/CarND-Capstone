@@ -27,7 +27,7 @@ Each waypoint includes a target velocity value. When there is no stopline nearby
 
 # Traffic light detection
 
-Traffic light detection is part of the perception module where the car can detect correctly traffic lights and its state (red, yellow and green). It is important to have a high degree of accuracy since failing to detect correctly a traffic light could cause an accident. Futhermore, it is important that the detection is efficient since a long delay could cause the car not to be able to stop in time and cause an accident as well.
+Traffic light detection is part of the perception module where the car can detect correctly traffic lights and its state (red, yellow and green). It is important to have a high degree of accuracy since failing to detect correctly a traffic light could cause an accident. Furthermore, it is important that the detection is efficient since a long delay could cause the car not to be able to stop in time and cause an accident as well.
 
 The traffic light detection receives images colors from the car/simulator. A `camera_info` publisher publishes the current camera image to the `/image_color` topic at 10hz. We subscribe to
 `/image_color` inside the `tl_detector` node and cache the current image received. The goal of `tl_detector` is to
@@ -35,11 +35,11 @@ The traffic light detection receives images colors from the car/simulator. A `ca
  The `tl_detector` run the most recent available camera image through a neural network to detect
   any traffic lights with their status.
 
-## Models and arquitectures explored
+## Models and architectures explored
 
-The selection of a model an aquitecutre is important as this influences the accuracy and efficiency in detecting traffic lights.
+The selection of a model an architecture is important as this influences the accuracy and efficiency in detecting traffic lights.
 
-We considered different models and arquitectures:
+We considered different models and architectures:
 
 - Faster-rcnn: this is a type of architecture/model that have two training phase. First it has a region proposal network to obtain the region of interest. In addition, it has a classification network.
 - SSD (Single Shot Detection) architecture: Instead of having a two training phase, this type of architecture have just one training phase. Therefore, this architecture can be trained end-to-end.
