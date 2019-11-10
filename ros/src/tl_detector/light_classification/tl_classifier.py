@@ -17,16 +17,16 @@ MODEL_TO_SIM = {
 }
 
 MODEL_TO_SITE = {
-    '0': TrafficLight.GREEN,
+    '1': TrafficLight.GREEN,
     '2': TrafficLight.RED,
-    '1': TrafficLight.YELLOW,
+    '3': TrafficLight.YELLOW,
 }
 
 class TLClassifier(object):
     def __init__(self, is_site):
         self.is_site = is_site
         if is_site:
-            graph_path = 'site/ssd_mobilenet_v1_coco_10000steps/frozen_inference_graph.pb'
+            graph_path = 'site/ssd_mobilenet_v1_coco_1000_synthetic_gamma_random/frozen_inference_graph.pb'
         else:
             graph_path =  'sim/ssd_mobilenet_v1_coco_20000steps/frozen_inference_graph.pb'
         self.graph = self.load_graph(NN_GRAPH_PREFIX + graph_path)
@@ -84,6 +84,25 @@ class TLClassifier(object):
 
         return box_coords
 
+    def adjust_gamma(self, img, gamma=1.0):
+        inv_gamma = 1.0 / gamma
+        table = np.array([
+          ((i / 255.0) ** inv_gamma) * 255
+          for i in np.arange(0, 256)])
+        return cv2.LUT(img.astype(np.uint8), table.astype(np.uint8))
+
+    def adjust_contrast(self, img):
+        clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(2,2))
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
+        img[:,:,0] = clahe.apply(img[:,:,0])
+        img = cv2.cvtColor(img, cv2.COLOR_LAB2RGB)
+        return img
+
+    def preprocess(self, img):
+        img = self.adjust_contrast(img)
+        img = self.adjust_gamma(img, 0.3)
+        return img
+
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
 
@@ -104,7 +123,7 @@ class TLClassifier(object):
         # convert to RGB for detection
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        # image = preprocess(image)
+        image = self.preprocess(image)
         image_np = np.expand_dims(np.asarray(image, dtype=np.uint8), 0)
         # Actual detection.
         (boxes, scores, classes) = sess.run(
