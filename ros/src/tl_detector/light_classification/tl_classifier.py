@@ -11,22 +11,22 @@ DEBUG = True
 NN_GRAPH_PREFIX = './light_classification/'
 
 MODEL_TO_SIM = {
-    '1': TrafficLight.GREEN,
-    '2': TrafficLight.RED,
-    '3': TrafficLight.YELLOW,
+    '1': {'ros_label': TrafficLight.GREEN, 'bbox_color': 'green'},
+    '2': {'ros_label': TrafficLight.RED, 'bbox_color': 'red'},
+    '3': {'ros_label': TrafficLight.YELLOW, 'bbox_color': 'yellow'},
 }
 
 MODEL_TO_SITE = {
-    '1': TrafficLight.GREEN,
-    '2': TrafficLight.RED,
-    '3': TrafficLight.YELLOW,
+    '1': {'ros_label': TrafficLight.GREEN, 'bbox_color': 'green'},
+    '2': {'ros_label': TrafficLight.RED, 'bbox_color': 'red'},
+    '3': {'ros_label': TrafficLight.YELLOW, 'bbox_color': 'yellow'},
 }
 
 class TLClassifier(object):
     def __init__(self, is_site):
         self.is_site = is_site
         if is_site:
-            graph_path = 'site/ssd_mobilenet_v1_coco_1000_synthetic_gamma_random/frozen_inference_graph.pb'
+            graph_path = 'site/ssd_mobilenet_v1_coco_40000_external_site/frozen_inference_graph.pb'
         else:
             graph_path =  'sim/ssd_mobilenet_v1_coco_20000steps/frozen_inference_graph.pb'
         self.graph = self.load_graph(NN_GRAPH_PREFIX + graph_path)
@@ -60,13 +60,13 @@ class TLClassifier(object):
         filtered_classes = classes[idxs, ...]
         return filtered_boxes, filtered_scores, filtered_classes
 
-    def draw_boxes(self, image, boxes, classes, colors, thickness=3):
+    def draw_boxes(self, image, boxes, classes, lookup_dict, thickness=3):
         """Draw bounding boxes on the image"""
         draw = ImageDraw.Draw(image)
         for i in range(len(boxes)):
             bot, left, top, right = boxes[i, ...]
             class_id = int(classes[i])
-            color = colors[class_id - 1]
+            color = lookup_dict[str(class_id)]['bbox_color']
             draw.line([(left, top), (left, bot), (right, bot), (right, top), (left, top)], width=thickness, fill=color)
 
     def to_image_coords(self, boxes, height, width):
@@ -100,7 +100,7 @@ class TLClassifier(object):
 
     def preprocess(self, img):
         img = self.adjust_contrast(img)
-        img = self.adjust_gamma(img, 0.3)
+        img = self.adjust_gamma(img, 0.4)
         return img
 
     def get_classification(self, image):
@@ -123,7 +123,7 @@ class TLClassifier(object):
         # convert to RGB for detection
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        image = self.preprocess(image)
+        # image = self.preprocess(image)
         image_np = np.expand_dims(np.asarray(image, dtype=np.uint8), 0)
         # Actual detection.
         (boxes, scores, classes) = sess.run(
@@ -140,10 +140,11 @@ class TLClassifier(object):
         scores = np.squeeze(scores)
         classes = np.squeeze(classes)
 
-        confidence_cutoff = 0.5
+        confidence_cutoff = 0.3
         # Filter boxes with a confidence score less than `confidence_cutoff`
         # The current box coordinates are normalized to a range between 0 and 1.
         # This converts the coordinates actual location on the image.
+        lookup_dict = MODEL_TO_SITE if self.is_site else MODEL_TO_SIM
         if DEBUG is False:
             annotated_image = image
         else:
@@ -154,7 +155,7 @@ class TLClassifier(object):
             print(scores)
 
             pil_image = PIL_Image.fromarray(image)
-            self.draw_boxes(pil_image, adjusted_boxes, classes, ['green', 'red', 'yellow', 'gray'])
+            self.draw_boxes(pil_image, adjusted_boxes, classes, lookup_dict)
             annotated_image = np.asarray(pil_image)
 
         light_status = TrafficLight.UNKNOWN
@@ -163,9 +164,8 @@ class TLClassifier(object):
 
         likely_color = int(classes[0])
 
-        lookup_dict = MODEL_TO_SITE if self.is_site else MODEL_TO_SIM
         if str(likely_color) in lookup_dict:
-            light_status = lookup_dict[str(likely_color)]
+            light_status = lookup_dict[str(likely_color)]['ros_label']
 
         if DEBUG:
             print('likely_color [' + str(likely_color) + ']')
