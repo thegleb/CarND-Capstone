@@ -26,7 +26,7 @@ class TLClassifier(object):
     def __init__(self, is_site):
         self.is_site = is_site
         if is_site:
-            graph_path = 'site/ssd_mobilenet_v1_coco_40000_external_site/frozen_inference_graph.pb'
+            graph_path = 'site/ssd_mobilenet_v1_coco_10000_gamma/frozen_inference_graph.pb'
         else:
             graph_path =  'sim/ssd_mobilenet_v1_coco_20000steps/frozen_inference_graph.pb'
         self.graph = self.load_graph(NN_GRAPH_PREFIX + graph_path)
@@ -98,9 +98,9 @@ class TLClassifier(object):
         img = cv2.cvtColor(img, cv2.COLOR_LAB2RGB)
         return img
 
-    def preprocess(self, img):
+    def preprocess(self, img, gamma=0.8):
         img = self.adjust_contrast(img)
-        img = self.adjust_gamma(img, 0.4)
+        img = self.adjust_gamma(img, gamma)
         return img
 
     def get_classification(self, image):
@@ -123,8 +123,8 @@ class TLClassifier(object):
         # convert to RGB for detection
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        # image = self.preprocess(image)
-        image_np = np.expand_dims(np.asarray(image, dtype=np.uint8), 0)
+        image = self.preprocess(image, 0.8)
+        image_np = np.expand_dims(image, 0)
         # Actual detection.
         (boxes, scores, classes) = sess.run(
             [
@@ -140,7 +140,7 @@ class TLClassifier(object):
         scores = np.squeeze(scores)
         classes = np.squeeze(classes)
 
-        confidence_cutoff = 0.3
+        confidence_cutoff = 0.5
         # Filter boxes with a confidence score less than `confidence_cutoff`
         # The current box coordinates are normalized to a range between 0 and 1.
         # This converts the coordinates actual location on the image.
