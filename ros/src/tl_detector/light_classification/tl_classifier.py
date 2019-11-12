@@ -28,7 +28,7 @@ class TLClassifier(object):
         if is_site:
             graph_path = 'site/ssd_mobilenet_v1_coco_20000_gamma/frozen_inference_graph.pb'
         else:
-            graph_path =  'sim/ssd_mobilenet_v1_coco_20000steps/frozen_inference_graph.pb'
+            graph_path = 'sim/ssd_mobilenet_v1_coco_20000steps/frozen_inference_graph.pb'
         self.graph = self.load_graph(NN_GRAPH_PREFIX + graph_path)
         self.image_tensor = self.graph.get_tensor_by_name('image_tensor:0')
         self.detection_boxes = self.graph.get_tensor_by_name('detection_boxes:0')
