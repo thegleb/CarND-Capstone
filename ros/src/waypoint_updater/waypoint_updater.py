@@ -19,11 +19,10 @@ Once you have created dbw_node, you will update this node to use the status of t
 Please note that our simulator also provides the exact location of traffic lights and their
 current status in `/vehicle/traffic_lights` message. You can use this message to build this node
 as well as to verify your TL classifier.
-
-TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
-LOOKAHEAD_WPS = 50  # Number of waypoints we will publish. You can change this number
+ # Number of waypoints we will publish
+LOOKAHEAD_WPS = 200
 MAX_DECEL = 0.1
 
 class WaypointUpdater(object):
@@ -34,6 +33,7 @@ class WaypointUpdater(object):
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
         rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
 
+        # unused/unneeded
         # rospy.Subscriber('/obstacle_waypoint', Waypoint, self.obstacle_cb)
 
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
@@ -125,7 +125,7 @@ class WaypointUpdater(object):
         self.stopline_wp_idx = msg.data
 
     def obstacle_cb(self, msg):
-        # TODO: Callback for /obstacle_waypoint message. We will implement it later
+        # unused at this time
         pass
 
     def get_waypoint_velocity(self, waypoint):

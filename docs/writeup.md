@@ -32,6 +32,8 @@ The traffic light detection receives images from the simulator or car. The `came
 
 The goal of `tl_detector.py` is to perform the necessary image processing and publish the index of the waypoint closest to the next traffic light if the light status is red, or `-1` ("not found") if the nearest traffic light is yellow or red. This is done at a frequency of 10hz as well, chosen because that is the default rate of image publishing and is thus the theoretical maximum rate at which we can detect and classify traffic lights.
 
+Luckily in the constrained environments of the simulator and the site, we do not need to worry about seeing multiple traffic lights with different statuses, or obstacles requiring lane changes or other pathfinding algorithms.
+
 ## Models and architectures explored
 
 The selection of model and architecture is important as this influences the accuracy and efficiency in detecting traffic lights.
@@ -54,12 +56,12 @@ The different models we aimed to re-train and evaluate their accuracy and perfor
 After selecting the models we:
 
 - Trained the different models using simulation and site data sets
-- Evaluated accuracy and speed for each of these models
+- Evaluated accuracy and speed for each of these models by running inference through the ROS system as well as getting offline evaluation results through Python scripts (mostly in `./model-playground/CarND-capstone-model-playground.ipynb`)
 - Selected a model
 - Evaluated how we could improve the accuracy of the model selected by either tuning some of the parameters or feeding the training dataset with new images
-- Froze the graphs when the trained model was accurate and efficient enough
+- Froze the graphs and proceeded when the trained model was accurate and efficient enough
 
-The exported graphs were the ones used in the perception module.
+The exported graphs were the final ones used in the perception module.
 
 ## Settings of the models
 
@@ -75,7 +77,6 @@ Each model had particular settings (`.config` file) that we needed to tune. The 
   - `num_examples`: number of images in the evaluation data.
 - `eval_input_reader` and `train_input_reader`:
   - `input_path` and `label_map_path` to the `images.record` files and `label_map.pbtxt` respectively.
-
 
 ## Datasets
 
@@ -155,21 +156,20 @@ We decided to have 10 categories of bounding boxes sizes. We defined the size as
 
 ## Implementation adjustments
 
-Since the neural network takes longer than 100msec (processing speed needed to maintain a constant 10hz) to return
- results, at every cycle we set a boolean to keep track of when we are currently processing an image. As a result, each detection cycle uses the latest image and there is less chance of lag due to triggering a new cycle of traffic light
-   detection before the previous one completes, causing a series of stale results messing up the car behavior.
+Since we wish to publish the latest stopline at a frequency of 10hz and the neural network takes longer than 100msec to return
+ results, at every cycle we set a boolean to track if we are currently processing an image. This way we can skip processing new images until the last detection cycle completes, so that each detection cycle uses the latest image and there is less chance of lag due to triggering a new detections before the previous one completes. If detections are triggered while another image is being processed, we get stale results that mess up car behavior.
 
-For each detected traffic light state, we use a couple techniques to filter out possible noise:
+Additionally, for each detected traffic light state, we use several techniques to filter out possible noise:
 
 - Only using detections with a confidence level higher than `0.5`
-- Waiting until we identify the same state at least 2 times before updating the prediction
+- Waiting until we identify the same state at least 3 times before updating the prediction
 
- Both of these techniques guard against unpredictable behavior due to errors in detection. For the second method, 2
- was a number chosen to balance confidence in the prediction with reacting quickly enough to changing conditions.
+ Both of these techniques guard against unpredictable behavior due to errors in detection. For the second method, 3
+ was a number chosen to balance our confidence in the prediction with reacting quickly enough to changing conditions.
 
 Another byproduct of slow detection speeds is the possibility of the car seeing a yellow light and
- interpreting it too slowly, allowing the light to turn red and causing the car to run the red light. With 2 cycles to
- update predictions, the worst case is ~3 detections, because the light can change in the next frame after the
+ interpreting it too slowly, allowing the light to turn red and causing the car to run the red light. With 3 cycles to
+ update predictions, the worst case is ~4 detections, because the light can change in the next frame after the
  previous cycle of detection kicked off.
 
 To solve this, we assume the next stopline applies unless either:
@@ -177,11 +177,11 @@ To solve this, we assume the next stopline applies unless either:
 - we identify a `yellow` light and we are close enough to it to exclude the possibility of the light turning red
  before we cross the line.
 
-This ensures that in the worst case scenario, the car will always stop at the next stopline (assuming it is not mis
--detecting red lights as green).
+This ensures that in the worst case scenario, the car will always stop at the next stopline (assuming it is not mis-detecting red lights as green).
 
 # Future work
-- Train the model with smaller traffic lights so that we do not miss these traffic lights in our detection.
+- More carefully tune the model to detect smaller traffic lights so that we do not miss these traffic lights in our detection
+- The chosen site model doesn't seem to have great accuracy detecting traffic lights up close, so one approach would be to generate more training data with larger traffic lights to improve this performance
 
 # References
 

@@ -16,7 +16,7 @@ import time
 DEBUG = True
 
 LARGE_NUMBER = 100000
-NUM_CONFIRMATIONS = 2
+NUM_CONFIRMATIONS = 3
 
 class TLDetector(object):
     def __init__(self):
