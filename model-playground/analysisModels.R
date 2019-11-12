@@ -1,7 +1,7 @@
 library("reshape2")
 library("ggplot2")
 
-dataModel <- read.csv(file="evaluation_model_accuracy_site_11nov.csv", header=FALSE, sep=",")
+dataModel <- read.csv(file="evaluation_model_accuracy_site_13nov_site_real_adj.csv", header=FALSE, sep=",")
 names(dataModel) <- c("ModelName", "NumSteps", "TrainDataName", "TestEvaluation", "Synthetic", "TrafficLight", "TotalSamples", "CorrectDetected", "IncorrectDetected", "NotDetected", "DetectedBackgroundAsTrafficLight")
 
 dataModel$TrafficLight <- factor(dataModel$TrafficLight,
@@ -15,8 +15,20 @@ dataModel.reshape$Measurement <- factor(dataModel.reshape$Measurement,
                                         levels = c("CorrectDetected", "IncorrectDetected", "NotDetected", "DetectedBackgroundAsTrafficLight"),
                                         labels = c("Correct", "Incorrect", "No Detected", "Background"))
 
+dataModel.reshape$ModelName <- factor(dataModel.reshape$ModelName,
+                                      levels = c("ssd_inception_v2_coco_10000_synthetic_ajith_test", "ssd_mobilenet_v1_coco_20000_gamma_test", "ssd_mobilenet_v1_coco_40000_external_site_test"),
+                                      labels = c("ssd_inception_v2_coco_10000", "ssd_mobilenet_v1_coco_20000_gamma", "ssd_mobilenet_v1_coco_40000"))
+
 ggplot(data=dataModel.reshape, aes(x=Measurement, y=Count, fill = ModelName)) +
   geom_bar(stat="identity",  position = "dodge") + 
+  scale_fill_discrete(name = "Model") +
+  ggtitle("ssd mobilenet v1 coco 20000 evaluation")#+ 
+  #facet_grid(TrafficLight ~ .)
+
+ggplot(data=dataModel.reshape, aes(x=Measurement, y=Count)) +
+  geom_bar(stat="identity",  position = "dodge") + 
+  scale_fill_discrete(name = "Model") +
+  ggtitle("ssd mobilenet v1 coco 20000 evaluation") + 
   facet_grid(TrafficLight ~ .)
 
 # now to evaluate/analyse the accuracy based on the bounding box
@@ -64,11 +76,13 @@ processData <- function(data, numBBoxCat) {
   return (df)
 }
 
-dataModelBBox <- read.csv(file="evaluation_model_accuracy_bbox.csv", header=FALSE, sep=",")
+dataModelBBox <- read.csv(file="evaluation_model_accuracy_bbox_site_12nov.csv", header=FALSE, sep=",")
 names(dataModelBBox) <- c("ModelName", "NumSteps", "TrainDataName", "TestEvaluation", "TrafficLight", "BoxSize", "CorrectDetected", "IncorrectDetected", "NotDetected", "TotalSamples")
 dataModelBBox$TrafficLight <- factor(dataModelBBox$TrafficLight,
                                  levels = c(1,2,3),
                                  labels = c("Green", "Red", "Yellow"))
+
+dataModelBBox <- dataModelBBox[dataModelBBox$ModelName == "ssd_mobilenet_v1_coco_20000_gamma_test",]
 
 dataModelBBox_Process <- processData(dataModelBBox, 10)
 
@@ -88,7 +102,7 @@ table(dataDB$Light)
 
 # Analyse model with different adjustments of gamma in the test set
 
-dataGamma <- read.csv(file="evaluation_model_accuracy_gamma_11nov.csv", header=FALSE, sep=",")
+dataGamma <- read.csv(file="evaluation_model_accuracy_gamma_12nov.csv", header=FALSE, sep=",")
 names(dataGamma) <- c("ModelName", "NumSteps", "TrainDataName", "TestEvaluation", "Synthetic", "TrafficLight", "TotalSamples", "CorrectDetected", "IncorrectDetected", "NotDetected", "DetectedBackgroundAsTrafficLight", "Gamma")
 
 dataGamma$TrafficLight <- factor(dataGamma$TrafficLight,
