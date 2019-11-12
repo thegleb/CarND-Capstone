@@ -1,7 +1,7 @@
 library("reshape2")
 library("ggplot2")
 
-dataModel <- read.csv(file="evaluation_model_accuracy.csv", header=FALSE, sep=",")
+dataModel <- read.csv(file="evaluation_model_accuracy_site_11nov.csv", header=FALSE, sep=",")
 names(dataModel) <- c("ModelName", "NumSteps", "TrainDataName", "TestEvaluation", "Synthetic", "TrafficLight", "TotalSamples", "CorrectDetected", "IncorrectDetected", "NotDetected", "DetectedBackgroundAsTrafficLight")
 
 dataModel$TrafficLight <- factor(dataModel$TrafficLight,
@@ -82,6 +82,26 @@ ggplot(dataModelBBox_Process.reshape, aes(x=BBoxSizeLevel, y=Count, group=Measur
 
 # Analysis of the existing database
 
-dataDB <- read.csv(file="evaluation_simulator_training_datasetx.csv", header=FALSE, sep=",")
+dataDB <- read.csv(file="evaluation_simulator_training_dataset.csv", header=FALSE, sep=",")
+names(dataDB) <- c("Light", "xmin", "xmax", "ymin", "ymax")
+table(dataDB$Light)
+
+# Analyse model with different adjustments of gamma in the test set
+
+dataGamma <- read.csv(file="evaluation_model_accuracy_gamma_11nov.csv", header=FALSE, sep=",")
+names(dataGamma) <- c("ModelName", "NumSteps", "TrainDataName", "TestEvaluation", "Synthetic", "TrafficLight", "TotalSamples", "CorrectDetected", "IncorrectDetected", "NotDetected", "DetectedBackgroundAsTrafficLight", "Gamma")
+
+dataGamma$TrafficLight <- factor(dataGamma$TrafficLight,
+                                 levels = c(1,2,3),
+                                 labels = c("Green", "Red", "Yellow"))
+
+dataGamma.reshape <- melt(dataGamma, id.vars = c("TrafficLight", "Gamma"),  measure.vars = c("CorrectDetected"))
+names(dataGamma.reshape) <- c("TrafficLight", "Gamma","Measurement", "Count")
+
+ggplot(data=dataGamma.reshape, aes(x=Gamma, y=Count)) +
+  geom_point() +
+  geom_line() +
+  ggtitle("Detected correctly") +
+  facet_grid(TrafficLight ~ .)
 
 
