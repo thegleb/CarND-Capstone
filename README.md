@@ -104,11 +104,11 @@ The XML labels were used to create a csv file containing all the input image and
 We used two different datasets. For training the models we used an external one [3]. For evaluating the model, we
  created another dataset that was generated with a script. This script started with a few background images created by erasing existing traffic lights with Photoshop, onto which it placed a random number of traffic light images at random locations with some random transformations such as rotation or scaling.
 
-Example of a labeled training image:
+Labeled training image using labelImg:
 
 ![](./readme-files/sim_labeled_original.png "Sample labeled training image")
 
-Example of a synthetic image for evaluation:
+Synthetic image for evaluation:
 
 ![](./readme-files/sim_synthetic_1.jpg "Sample labeled synthetic image")
 
@@ -130,27 +130,27 @@ The training images were first contrast-adjusted using OpenCV by converting to t
 
 After contrast adjustment, the [gamma value](https://en.wikipedia.org/wiki/Gamma_correction) of each image was randomly varied between values of 0.4 to 0.6 to simulate changing light conditions (smaller gamma value means a darker image).
 
-Original example:
+(1) Original example:
 
 ![](./readme-files/1-sample-original.png "Original")
 
-Only adjusting gamma to 0.5 to improve traffic light visibility on the background
+(2) Only adjusting gamma to 0.5 to improve traffic light visibility on the background
 
 ![](./readme-files/2-sample-only-gamma-0.5.png "Gamma adjusted")
 
-Only contrast-adjusting via CLAHE on the L color channel (in LAB color space):
+(3) Only contrast-adjusting via CLAHE on the L color channel (in LAB color space):
 
 ![](./readme-files/3-sample-only-contrast.png "Contrast adjusted")
 
-Adjusting contrast first, gamma second:
+(4) Adjusting contrast first, gamma second:
 
 ![](./readme-files/4-sample-contrast-gamma-0.5.png "Adjusting contrast first, gamma second")
 
-Adjusting gamma first, contrast second:
+(5) Adjusting gamma first, contrast second:
 
 ![](./readme-files/5-sample-gamma-0.5-contrast.png "Adjusting gamma first, contrast second")
 
-Changing contrast first and gamma second seemed to provide the most contrast and background separation for the traffic light images while preserving traffic light detail not seen on the original images, so this was the transformation chosen for both generating site training images as well as the inference code.
+Changing contrast first and gamma second (sample 4) seemed to provide the most contrast and background separation for the traffic light images while preserving traffic light detail not seen on the original images, so this was the transformation chosen for both generating site training images as well as the inference code.
 
 Example training images:
 
@@ -178,11 +178,12 @@ We also measured the efficienty (i.e. the amount of time each model took to proc
 
 ![](./readme-files/simulator_model_timings.png "Model performance using simulator data")
 
-We can see that the fast_rcnn_inception_v2 was quite slow and the fasted model was the ssd_mobilenet. Although the fast_rcnn was the more accurate model, we decided to discard it because of its slowness. Since all the other models performed similary, we chose the fastest model, i.e. ssd_mobilenet_v1_coco_20000, as our model.
+We can see that the fast_rcnn_inception_v2 was quite slow and the fasted model was the ssd_mobilenet. Although the fast_rcnn was the more accurate model, we decided to discard it because of its slowness. Since all the other models performed similary, we chose the fastest model, `ssd_mobilenet_v1_coco_20000`.
 
 To further analyse the selected model, we also decided to evaluate its performance for different traffic light sizes. We thought this could inform whether the model detected better some sizes than others and thus inform how we could best retrain this model with more data.
 
-We decided to have 10 categories of bounding boxes sizes. We defined the size as $size = width * height$. To obtain the range of traffic light sizes for each category, we calculated the maximum size and the minimum size of the traffic lights in our evaluation data set. Then, we calculated the range size for each category as `$range_size=\frac{(max_size-min_size)}{10}$`. So the first category in the graph (category 0) had the following range: `[min_size, min_size+range_size]`. The last category had `[max_size-range_size, max_size]`.
+We decided to have 10 categories of bounding boxes sizes. We defined the size as `$size = width * height$`. To obtain the range of traffic light sizes for each category, we calculated the maximum size and the minimum size of the traffic lights in our evaluation data set. Then, we calculated the range size for each category as `$range_size=\frac{(max_size-min_size)}{10}$`. So the first category in the graph (category 0) had the following range: `[min_size, min_size+range_size]`. The last
+ category had `[max_size-range_size, max_size]`.
 
  ![](./readme-files/simulator_ssd_mobilenet_bbox_performance.png "Traffic light sizes analsysi for the ssd mobilened model")
 
@@ -353,8 +354,13 @@ Specific to these libraries, the simulator grader and Carla use the following:
 # References
 
 <sup>[1]</sup> [https://anyverse.ai/2019/06/19/synthetic-vs-real-world-data-for-traffic-light-classification](https://anyverse.ai/2019/06/19/synthetic-vs-real-world-data-for-traffic-light-classification)
+
 <sup>[2]</sup> [https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md  ](https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md  )
+
 <sup>[3]</sup> [https://github.com/alex-lechner/Traffic-Light-Classification#linux](https://github.com/alex-lechner/Traffic-Light-Classification#linux)
+
 <sup>[4]</sup> [https://github.com/tzutalin/labelImg](https://github.com/tzutalin/labelImg)
+
 <sup>[5]</sup> [https://github.com/datitran/raccoon_dataset](https://github.com/datitran/raccoon_dataset)
+
 <sup>[6]</sup> [https://pythonprogramming.net/creating-tfrecord-files-tensorflow-object-detection-api-tutorial  ](https://pythonprogramming.net/creating-tfrecord-files-tensorflow-object-detection-api-tutorial  )
