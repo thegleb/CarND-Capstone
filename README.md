@@ -27,12 +27,12 @@ When there is no stopline nearby, we simply publish these waypoints
 
 Traffic light detection is part of the perception module where the car can detect the nearest traffic light and its state (red, yellow and green). It is important to have a high degree of accuracy since failing to correctly detect a traffic light could cause an accident. Furthermore, it is important that the detection is efficient since a long delay could cause the car not to be able to stop in time and cause an accident as well.
 
-![](readme-images/sim_moving_1.gif "Sim detections in action")
+![](readme-files/sim_moving_1.gif "Sim detections in action")
 
 The traffic light detection receives images from the simulator or car. The `camera_info` publisher publishes the current camera image to the `/image_color` topic at 10hz. We subscribe to
 `/image_color` inside the `tl_detector.py` node and cache the latest image received while detection happens out of sync with the camera image subscriber.
 
-![](readme-images/site_moving_1.gif "Site detections in action")
+![](readme-files/site_moving_1.gif "Site detections in action")
 
 The goal of `tl_detector.py` is to perform the necessary image processing and publish the index of the waypoint closest to the next traffic light if the light status is red, or `-1` ("not found") if the nearest traffic light is yellow or red. This is done at a frequency of 10hz as well, chosen because that is the default rate of image publishing and is thus the theoretical maximum rate at which we can detect and classify traffic lights.
 
@@ -106,11 +106,11 @@ We used two different datasets. For training the models we used an external one 
 
 Example of a labeled training image:
 
-![](./readme-images/sim_labeled_original.png "Sample labeled training image")
+![](./readme-files/sim_labeled_original.png "Sample labeled training image")
 
 Example of a synthetic image for evaluation:
 
-![](./readme-images/sim_synthetic_1.jpg "Sample labeled synthetic image")
+![](./readme-files/sim_synthetic_1.jpg "Sample labeled synthetic image")
 
  The external dataset<sup>[3]</sup> used for training the simulator model was composed of 888 green lights, 1430 red lights, and 254 yellow lights.
 
@@ -120,7 +120,7 @@ We tried several datasets for training the site models. One was a labeled set of
 
 We also tried training with synthetic images created by amending one of these images with another instance of a traffic light:
 
-![](./readme-images/site_synthetic_1.png "Sample site synthetic image")
+![](./readme-files/site_synthetic_1.png "Sample site synthetic image")
 
 We also trained models using images created in a way similar to the synthetic simulator images - using a clean background with multiple traffic light images superimposed.
 
@@ -132,29 +132,29 @@ After contrast adjustment, the [gamma value](https://en.wikipedia.org/wiki/Gamma
 
 Original example:
 
-![](./readme-images/1-sample-original.png "Original")
+![](./readme-files/1-sample-original.png "Original")
 
 Only adjusting gamma to 0.5 to improve traffic light visibility on the background
 
-![](./readme-images/2-sample-only-gamma-0.5.png "Gamma adjusted")
+![](./readme-files/2-sample-only-gamma-0.5.png "Gamma adjusted")
 
 Only contrast-adjusting via CLAHE on the L color channel (in LAB color space):
 
-![](./readme-images/3-sample-only-contrast.png "Contrast adjusted")
+![](./readme-files/3-sample-only-contrast.png "Contrast adjusted")
 
 Adjusting contrast first, gamma second:
 
-![](./readme-images/4-sample-contrast-gamma-0.5.png "Adjusting contrast first, gamma second")
+![](./readme-files/4-sample-contrast-gamma-0.5.png "Adjusting contrast first, gamma second")
 
 Adjusting gamma first, contrast second:
 
-![](./readme-images/5-sample-gamma-0.5-contrast.png "Adjusting gamma first, contrast second")
+![](./readme-files/5-sample-gamma-0.5-contrast.png "Adjusting gamma first, contrast second")
 
 Changing contrast first and gamma second seemed to provide the most contrast and background separation for the traffic light images while preserving traffic light detail not seen on the original images, so this was the transformation chosen for both generating site training images as well as the inference code.
 
 Example training images:
 
-![](./readme-images/site_synthetic_2.jpg "Another sample site synthetic image")
+![](./readme-files/site_synthetic_2.jpg "Another sample site synthetic image")
 
 We generated 2000 such images with 4002 red, 4010 yellow, and 3943 green lights in total.
 
@@ -172,11 +172,11 @@ As we can see in the below picture, the fast_rcnn_inception_v2 with 10000 steps 
 
 Another observation is that the models detected better red lights than the other lights. This is probably owing to the fact that the trained dataset had more red lights.
 
-![](./readme-images/simulator_model_performance.png "Model performance using simulator data")
+![](./readme-files/simulator_model_performance.png "Model performance using simulator data")
 
 We also measured the efficienty (i.e. the amount of time each model took to process and evaluate each image).
 
-![](./readme-images/simulator_model_timings.png "Model performance using simulator data")
+![](./readme-files/simulator_model_timings.png "Model performance using simulator data")
 
 We can see that the fast_rcnn_inception_v2 was quite slow and the fasted model was the ssd_mobilenet. Although the fast_rcnn was the more accurate model, we decided to discard it because of its slowness. Since all the other models performed similary, we chose the fastest model, i.e. ssd_mobilenet_v1_coco_20000, as our model.
 
@@ -184,7 +184,7 @@ To further analyse the selected model, we also decided to evaluate its performan
 
 We decided to have 10 categories of bounding boxes sizes. We defined the size as $size = width * height$. To obtain the range of traffic light sizes for each category, we calculated the maximum size and the minimum size of the traffic lights in our evaluation data set. Then, we calculated the range size for each category as `$range_size=\frac{(max_size-min_size)}{10}$`. So the first category in the graph (category 0) had the following range: `[min_size, min_size+range_size]`. The last category had `[max_size-range_size, max_size]`.
 
- ![](./readme-images/simulator_ssd_mobilenet_bbox_performance.png "Traffic light sizes analsysi for the ssd mobilened model")
+ ![](./readme-files/simulator_ssd_mobilenet_bbox_performance.png "Traffic light sizes analsysi for the ssd mobilened model")
 
  Although the model performed well in detecting correctly the traffic lights in general, it had some problems in detecting the smallest sizes. This could also explain why we have seen quite a few traffic lights undetected. One explanation for this is that our evaluation script produced too small traffic lights that the model was not trained for. We did not consider this as a big concern as if we miss a traffic light that is far away from the car, this would not cause any problem as long as we detect it as we get closer to it and we have enough time to stop.
 
@@ -198,17 +198,17 @@ We evaluated three models shown in the below pictures. These were:
 
 The difference between these three models were the number of steps and the datasets used for training. The ssd_mobilenet_v1_coco_20000_gamma performed better as was the only one trained with synthetic images generated by a script and thus this model could see a larger variety of traffic lights.
 
-![](./readme-images/site_models_evaluation.png "Model performance using site data")
+![](./readme-files/site_models_evaluation.png "Model performance using site data")
 
 We also observed that by adjusting the gamma in the different images influenced how well the models performed. That is why we used another test set to be able to adjust the gamma parameter for the `ssd_mobilenet_v1_coco_20000_gamma` model. The results are below.
 
-![](./readme-images/ssd_mobilenet_v1_coco_20000_gamma_analysis.png "Gamma analysis for the ssd mobilenet v1 coco 20000")
+![](./readme-files/ssd_mobilenet_v1_coco_20000_gamma_analysis.png "Gamma analysis for the ssd mobilenet v1 coco 20000")
 
 We decided to adjust the gammma parameter to 0.4 as this showed better results.
 
 Finally, we evaluated the final model with an evaluation data set (real data - not generated by a script).
 
-![](./readme-images/ssd_mobilenet_v1_coco_20000_evaluation.png "Evaluation of the ssd mobilenet v1 coco 20000 with evaluation data set")
+![](./readme-files/ssd_mobilenet_v1_coco_20000_evaluation.png "Evaluation of the ssd mobilenet v1 coco 20000 with evaluation data set")
 
 We can see that the model performed very well in detecting all the lights.
 
