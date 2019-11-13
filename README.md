@@ -3,11 +3,11 @@
 ### Team Fast and Furious: Carla Drift
 
 #### Team members
-- Gleb Podkolzin (lead)
-- Ajith Raj
-- Allen Hsu
-- David Altimira
-- Ming Wong
+- Gleb Podkolzin (lead) - `gpodkolzin[at]gmail.com`
+- Ajith Raj - `ajith3530[at]gmail.com`
+- Allen Hsu - `yhsu018[at]ucr.edu`
+- David Altimira - `d_altimira[at]hotmail.com`
+- Ming Wong - `mingyangwong[at]yahoo.com`
 
 # General approach
 
