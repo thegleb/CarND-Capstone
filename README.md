@@ -17,7 +17,7 @@ The system of the vehicle is composed on three modules: (1) Perception, (2) Plan
 
 # Waypoint updater
 
-The waypoint updater publishes at a frequency of 50hz. At every cycle, it sends a set number of waypoints ahead of the car to the `/final_waypoints` publisher. We chose 50 as the number of waypoints to balance performance in the simulator with driving accuracy. In our estimation, each waypoint represents about 1 meter of distance on average, so 50 waypoints provides about 50 meters of forward planning, or ~5 seconds of driving at the top simulator speed of ~24mph (~10.7m/sec).
+The waypoint updater publishes at a frequency of 50hz. At every cycle, it sends a set number of waypoints ahead of the car to the `/final_waypoints` publisher. We chose 50 as the number of waypoints to balance performance in the simulator with driving accuracy.
 
 When there is no stopline nearby, we simply publish these waypoints
  as given. However, if there is a stopline due to a combination of traffic light location and status (location received via the `/vehicle/traffic_lights` topic and impending red light detected in `tl_detector.py`), we adjust the velocity of the waypoints in order to bring the target velocity of the car down
