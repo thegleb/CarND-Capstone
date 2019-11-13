@@ -13,7 +13,7 @@ import math
 import yaml
 import time
 
-DEBUG = True
+DEBUG = False
 
 LARGE_NUMBER = 100000
 NUM_CONFIRMATIONS = 3

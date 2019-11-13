@@ -6,7 +6,7 @@ from PIL import Image as PIL_Image
 
 from styx_msgs.msg import TrafficLight
 
-DEBUG = True
+DEBUG = False
 
 NN_GRAPH_PREFIX = './light_classification/'
 
@@ -98,7 +98,7 @@ class TLClassifier(object):
         img = cv2.cvtColor(img, cv2.COLOR_LAB2RGB)
         return img
 
-    def preprocess(self, img, gamma=0.8):
+    def preprocess(self, img, gamma=0.4):
         img = self.adjust_contrast(img)
         img = self.adjust_gamma(img, gamma)
         return img
@@ -123,7 +123,7 @@ class TLClassifier(object):
         # convert to RGB for detection
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        image = self.preprocess(image, 0.45)
+        image = self.preprocess(image, 0.4)
         image_np = np.expand_dims(image, 0)
         # Actual detection.
         (boxes, scores, classes) = sess.run(
@@ -142,14 +142,14 @@ class TLClassifier(object):
 
         confidence_cutoff = 0.5
         # Filter boxes with a confidence score less than `confidence_cutoff`
-        # The current box coordinates are normalized to a range between 0 and 1.
-        # This converts the coordinates actual location on the image.
         lookup_dict = MODEL_TO_SITE if self.is_site else MODEL_TO_SIM
         if DEBUG is False:
             annotated_image = image
         else:
             height, width, channels = image.shape
             boxes, scores, classes = self.filter_boxes(confidence_cutoff, boxes, scores, classes)
+            # The current box coordinates are normalized to a range between 0 and 1.
+            # This converts the coordinates actual location on the image.
             adjusted_boxes = self.to_image_coords(boxes, height, width)
             print(classes)
             print(scores)
