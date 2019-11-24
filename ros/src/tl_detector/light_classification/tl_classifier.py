@@ -26,7 +26,7 @@ class TLClassifier(object):
     def __init__(self, is_site):
         self.is_site = is_site
         if is_site:
-            graph_path = 'site/ssd_mobilenet_v1_coco_20000_gamma/frozen_inference_graph.pb'
+            graph_path = 'site/ssd_inception_v2_coco_17000_gamma_new/frozen_inference_graph.pb'
         else:
             graph_path = 'sim/ssd_mobilenet_v1_coco_20000steps/frozen_inference_graph.pb'
         self.graph = self.load_graph(NN_GRAPH_PREFIX + graph_path)
@@ -92,7 +92,7 @@ class TLClassifier(object):
         return cv2.LUT(img.astype(np.uint8), table.astype(np.uint8))
 
     def adjust_contrast(self, img):
-        clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(2,2))
+        clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(6,6))
         img = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
         img[:,:,0] = clahe.apply(img[:,:,0])
         img = cv2.cvtColor(img, cv2.COLOR_LAB2RGB)
@@ -123,7 +123,10 @@ class TLClassifier(object):
         # convert to RGB for detection
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        image = self.preprocess(image, 0.4)
+        # preprocess for site
+        if self.is_site:
+            image = self.preprocess(image, 0.3)
+
         image_np = np.expand_dims(image, 0)
         # Actual detection.
         (boxes, scores, classes) = sess.run(
