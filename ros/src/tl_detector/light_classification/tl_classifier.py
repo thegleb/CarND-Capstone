@@ -125,7 +125,7 @@ class TLClassifier(object):
 
         # preprocess for site
         if self.is_site:
-            image = self.preprocess(image, 0.4)
+            image = self.preprocess(image, 0.3)
 
         image_np = np.expand_dims(image, 0)
         # Actual detection.
