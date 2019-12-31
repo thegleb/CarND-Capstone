@@ -3,11 +3,11 @@
 ### Team Fast and Furious: Carla Drift
 
 #### Team members
-- Gleb Podkolzin (lead) - `gpodkolzin[at]gmail.com`
-- Ajith Raj - `ajith3530[at]gmail.com`
-- Allen Hsu - `yhsu018[at]ucr.edu`
-- David Altimira - `d_altimira[at]hotmail.com`
-- Ming Wong - `mingyangwong[at]yahoo.com`
+- Gleb Podkolzin (lead)
+- Ajith Raj
+- Allen Hsu
+- David Altimira
+- Ming Wong
 
 # General approach
 
@@ -53,7 +53,7 @@ We considered different models and architectures:
 
 Additionally, there are implementations of neural networks that are optimized to run efficiently on less powerful hardware. These are named MobileNets, which can be useful when image processing needs to be fast at the expense of accuracy.
 
-Our approach was to reuse existing models from the TensorFlow detection model zoo <sup>[2]</sup>, a collection of detection models pre-trained on different datasets for the task of object detection. These pre-trained models were our starting point and we re-trained these models with various datasets.
+Our approach was to reuse existing models from the [TensorFlow detection model zoo](https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md), a collection of detection models pre-trained on different datasets for the task of object detection. These pre-trained models were our starting point and we re-trained these models with various datasets.
 
 The different models we aimed to re-train and evaluate their accuracy and performance were:
 
@@ -94,18 +94,18 @@ The collection of datasets was one of the most fundamental tasks. A dataset that
  classify, such as roughly equal numbers of red, green and yellow traffic light images
 2. The dataset should contain a good variety of data, such as taking traffic light images from different distances or different angles
 
-Applying data augmentation by adjusting the horizontal/vertical orientation, rotation, brightness, zoom level, etc. can help the model generalize better without having to obtain additional data. Using good quality synthetic images can also be used to help SSD models achieve a higher degree of generalization<sup>[2]</sup>.
+Applying data augmentation by adjusting the horizontal/vertical orientation, rotation, brightness, zoom level, etc. can help the model generalize better without having to obtain additional data. Using good quality synthetic images can also be used to help SSD models achieve a [higher degree of generalization](https://anyverse.ai/2019/06/19/synthetic-vs-real-world-data-for-traffic-light-classification).
 
 ### Data augmentation
 
 ### Methodology to generate datasets
 
-The simulator images were collected by directly running the vehicle in the simulator environment while using the `image_saver` tool from the `image_pipeline` ROS package to save images. The images collected were then labeled using the open source tool `labelImg`.<sup>[4]</sup>
-The XML labels were used to create a csv file containing all the input image and their respective label details.<sup>[6]</sup> Once the csv file was generated, it was converted into TFRecord format, as that is the label input for the model training. <sup>[5]</sup>
+The simulator images were collected by directly running the vehicle in the simulator environment while using the `image_saver` tool from the `image_pipeline` ROS package to save images. The images collected were then labeled using the open source tool [labelImg](https://github.com/tzutalin/labelImg).
+The XML labels were used to [create a csv file](https://pythonprogramming.net/creating-tfrecord-files-tensorflow-object-detection-api-tutorial) containing all the input image and their respective label details. Once the csv file was generated, it was [converted into TFRecord format](https://github.com/datitran/raccoon_dataset), as that is the label input for the model training.
 
 ### Simulation data
 
-We used two different datasets. For training the models we used an external one [3]. For evaluating the model, we
+We used two different datasets. For training the models we used an [external one](https://github.com/alex-lechner/Traffic-Light-Classification#linux). For evaluating the model, we
  created another dataset that was generated with a script. This script started with a few background images created by erasing existing traffic lights with Photoshop, onto which it placed a random number of traffic light images at random locations with some random transformations such as rotation or scaling.
 
 Labeled training image using labelImg:
@@ -116,7 +116,7 @@ Synthetic image for evaluation:
 
 ![](./readme-files/sim_synthetic_1.jpg "Sample labeled synthetic image")
 
- The external dataset<sup>[3]</sup> used for training the simulator model was composed of 888 green lights, 1430 red lights, and 254 yellow lights.
+ The [external dataset](https://github.com/alex-lechner/Traffic-Light-Classification#linux) used for training the simulator model was composed of 888 green lights, 1430 red lights, and 254 yellow lights.
 
 ### Site data
 
@@ -197,9 +197,9 @@ We decided to have 10 categories of bounding boxes sizes. We defined the size as
 
 We evaluated three models shown in the below pictures. These were:
 
-- ssd_inception_v2_coco_10000
-- ssd_mobilenet_v1_coco_20000_gamma
-- ssd_mobilenet_v1_coco_40000
+- `ssd_inception_v2_coco_10000`
+- `ssd_mobilenet_v1_coco_20000_gamma`
+- `ssd_mobilenet_v1_coco_40000`
 
 The difference between these three models were the number of steps and the datasets used for training. The ssd_mobilenet_v1_coco_20000_gamma performed better as was the only one trained with synthetic images generated by a script and thus this model could see a larger variety of traffic lights.
 
@@ -241,6 +241,36 @@ To solve this, we assume the next stopline applies unless either:
  before we cross the line.
 
 This ensures that in the worst case scenario, the car will always stop at the next stopline (assuming it is not mis-detecting red lights as green).
+
+# December 7, 2019 update
+
+Our first submission failed to work because of a missing `git add` for the frozen weights graph file.
+
+The second submission using the same `ssd_mobilenet_v1_coco_20000_gamma` network failed under dusty windshield conditions:
+
+![](./readme-files/ssd_mobilenet_dusty.gif "Dusty windshield output")
+
+At this point we started from scratch with a brand new model, using a new instance of `ssd_inception_v2_coco` trained
+using synthetic images that incorporated additional traffic light examples from the first two runs:
+
+![](./readme-files/site_new_synthetic.png "New training images")
+ 
+4000 such images were generated, with a total of 30 background images chosen at random, with 25 varieties of red lights, 34 green lights, and 32 yellow lights.
+Green was given additional variety because the car control code defaults to a fail-safe behavior that stops the car unless it sees a green light.
+ 
+Training image gamma was varied randomly between `0.3` and `0.6` to improve detection. This model was trained for just 17000 steps due to resource constraints.
+
+We also evaluated the new model's accuracy against the previously submitted one using a new evaluation set of 1000 synthetic images generated without any additional transformations.
+During evaluation, the input images were adjusted to `0.4` gamma values to match the gamma used for submission.
+
+![](./readme-files/new_accuracy.png "Accuracy stats for the new model compared to the previous")
+
+The `ssd_mobilenet_v1_coco_20000_gamma` network struggles with the higher variety of traffic light images present in the evaluation set,
+while `ssd_inception_v2_coco_17000_gamma_new` has almost double the accuracy on correct detections, as well as a much lower rate of missing traffic lights ("missed lights").
+
+The submission with the `ssd_inception_v2_coco_17000_gamma_new` model successfully reacted to the traffic light and thus was a success.
+
+You can see an abridged version of the process in this [brief summary video edited for YouTube](https://youtu.be/a5S_rHqUQ04).
 
 # Future work
 - More carefully tune the sim model to detect smaller traffic lights so that we do not miss these traffic lights in our detection.
@@ -354,17 +384,3 @@ Specific to these libraries, the simulator grader and Carla use the following:
 | TensorRT | N/A | N/A |
 | OpenCV | 3.2.0-dev | 2.4.8 |
 | OpenMP | N/A | N/A |
-
-# References
-
-<sup>[1]</sup> [https://anyverse.ai/2019/06/19/synthetic-vs-real-world-data-for-traffic-light-classification](https://anyverse.ai/2019/06/19/synthetic-vs-real-world-data-for-traffic-light-classification)
-
-<sup>[2]</sup> [https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md  ](https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md  )
-
-<sup>[3]</sup> [https://github.com/alex-lechner/Traffic-Light-Classification#linux](https://github.com/alex-lechner/Traffic-Light-Classification#linux)
-
-<sup>[4]</sup> [https://github.com/tzutalin/labelImg](https://github.com/tzutalin/labelImg)
-
-<sup>[5]</sup> [https://github.com/datitran/raccoon_dataset](https://github.com/datitran/raccoon_dataset)
-
-<sup>[6]</sup> [https://pythonprogramming.net/creating-tfrecord-files-tensorflow-object-detection-api-tutorial  ](https://pythonprogramming.net/creating-tfrecord-files-tensorflow-object-detection-api-tutorial  )
